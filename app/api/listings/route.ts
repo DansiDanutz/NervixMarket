@@ -16,6 +16,10 @@ export async function GET(req: Request) {
 
 /** Submit a listing. It stays pending (not public) until its 10 USD membership is paid. */
 export async function POST(req: Request) {
+  if (process.env.VERCEL && store().kind === 'file') {
+    // a hosted site needs the database; the file store is for local development only
+    return NextResponse.json({ error: 'Listings open very soon. Please come back in a little while.' }, { status: 503 })
+  }
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Send JSON.' }, { status: 400 }) }
   const v = validate((body ?? {}) as Record<string, unknown>)
