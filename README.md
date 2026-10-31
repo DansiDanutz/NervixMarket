@@ -20,8 +20,8 @@ never custodied). Membership lasts `MEMBERSHIP_DAYS` (365 by default); paying ag
      Copy its id → `NERVIXPAY_LINK_ID`.
    - Integrations → Payment webhook → `https://<your domain>/api/webhooks/nervixpay`. Copy the secret it shows
      once → `NERVIXPAY_WEBHOOK_SECRET`.
-2. **Supabase**: run `supabase/schema.sql` in the SQL editor. Put the project URL and the
-   **service-role** key in `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` (server-side only; RLS blocks the anon key).
+2. **Supabase**: run `supabase/schema.sql` in the SQL editor. Put the project URL and a
+   **secret key** (`sb_secret_…`, Project Settings → API Keys; or the legacy service-role key if legacy keys are on) in `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` (server-side only; RLS blocks the anon key).
 3. **Vercel**: import the repo, add the four variables above (and optionally `MEMBERSHIP_DAYS`), deploy.
 
 Without Supabase the app stores listings in `.data/listings.json` (local development only).

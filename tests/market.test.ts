@@ -109,3 +109,16 @@ describe('end to end: submit → pay → live', () => {
     expect((await r.json()).errors.website).toBeTruthy()
   })
 })
+
+describe('supabase keys', () => {
+  it('sends new sb_secret keys only as apikey, legacy JWTs also as bearer', async () => {
+    const { SupabaseStore } = await import('@/lib/store')
+    const seen: Headers[] = []
+    const f = (async (_u: string, init: RequestInit) => { seen.push(new Headers(init.headers)); return new Response('[]') }) as unknown as typeof fetch
+    await new SupabaseStore('https://x.supabase.co', 'sb_secret_abc', f).active()
+    await new SupabaseStore('https://x.supabase.co', 'eyJhbGciOi.legacy', f).active()
+    expect(seen[0].get('apikey')).toBe('sb_secret_abc')
+    expect(seen[0].get('authorization')).toBeNull()
+    expect(seen[1].get('authorization')).toBe('Bearer eyJhbGciOi.legacy')
+  })
+})

@@ -80,7 +80,12 @@ export class SupabaseStore implements Store {
   private async rest(p: string, init: RequestInit = {}, prefer?: string) {
     const r = await this.f(`${this.url.replace(/\/$/, '')}/rest/v1/${p}`, {
       ...init, cache: 'no-store',
-      headers: { apikey: this.key, authorization: `Bearer ${this.key}`, 'content-type': 'application/json', ...(prefer ? { prefer } : {}) },
+      headers: {
+        apikey: this.key,
+        // new-style keys (sb_secret_…) go only in apikey; legacy JWT keys also need the bearer header
+        ...(this.key.startsWith('sb_') ? {} : { authorization: `Bearer ${this.key}` }),
+        'content-type': 'application/json', ...(prefer ? { prefer } : {}),
+      },
     })
     if (!r.ok) throw new Error(`database ${r.status}: ${(await r.text()).slice(0, 200)}`)
     const t = await r.text()
