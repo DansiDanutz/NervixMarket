@@ -1,0 +1,25 @@
+{
+  "name": "nervix-market",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nervix Market: list your AI business in the DansLab AI Business Network. Membership 10 USD in USDT/USDC via NervixPay.",
+  "scripts": {
+    "dev": "next dev -p 3300",
+    "build": "next build",
+    "start": "next start -p 3300",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "15.5.28",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.4"
+  }
+}
