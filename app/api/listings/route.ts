@@ -24,6 +24,11 @@ export async function POST(req: Request) {
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Send JSON.' }, { status: 400 }) }
   const v = validate((body ?? {}) as Record<string, unknown>)
   if (!v.ok) return NextResponse.json({ errors: v.errors }, { status: 422 })
-  const l = await store().create(v.value)
-  return NextResponse.json({ id: l.id, slug: l.slug, status: l.status, checkout: checkoutUrl(l.id, l.owner_email), pending: `/pending/${l.id}` }, { status: 201 })
+  try {
+    const l = await store().create(v.value)
+    return NextResponse.json({ id: l.id, slug: l.slug, status: l.status, checkout: checkoutUrl(l.id, l.owner_email), pending: `/pending/${l.id}` }, { status: 201 })
+  } catch (err) {
+    console.error('listing submission failed', err)
+    return NextResponse.json({ error: 'Unable to save your listing right now. Please try again shortly.' }, { status: 503 })
+  }
 }

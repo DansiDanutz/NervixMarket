@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { config, extendUntil, membershipProblem, verifySignature, type PaidEvent } from '@/lib/nervixpay'
+import { config, membershipProblem, verifySignature, type PaidEvent } from '@/lib/nervixpay'
 import { store } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
@@ -21,11 +21,9 @@ export async function POST(req: Request) {
   const s = store()
   const l = await s.get(e.customerReference!)
   if (!l) return NextResponse.json({ ignored: 'unknown listing' })
-  const counted = await s.recordPayment(e.orderId, l.id, {
+  const until = await s.settlePayment(e.orderId, l.id, {
     token: e.currencyToken, network: e.network, amount: e.amountReceived, tx: e.transactionId, paidAt: e.paidAt,
-  })
-  if (!counted) return NextResponse.json({ ok: true, duplicate: true })
-  const until = extendUntil(l.paid_until, c.membershipDays)
-  await s.activate(l.id, until)
+  }, c.membershipDays)
+  if (!until) return NextResponse.json({ ok: true, duplicate: true })
   return NextResponse.json({ ok: true, listing: l.slug, paid_until: until })
 }

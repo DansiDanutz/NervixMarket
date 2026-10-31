@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { extendUntil } from './nervixpay'
 import { FOUNDING } from './founding'
 import { slugify, type Listing, type ListingInput } from './listing'
 
@@ -16,6 +17,7 @@ export interface Store {
   /** Remember a NervixPay order once. False if it was already counted (a webhook retry). */
   recordPayment(orderId: string, listingId: string, detail: Record<string, unknown>): Promise<boolean>
   activate(id: string, paidUntil: string): Promise<void>
+  settlePayment(orderId: string, listingId: string, detail: Record<string, unknown>, days: number): Promise<string | null>
 }
 
 export const newId = () => `lst_${randomBytes(9).toString('base64url')}`
@@ -55,6 +57,19 @@ export class FileStore implements Store {
   async get(id: string) { return (await this.load()).listings.find((l) => l.id === id) ?? null }
   async bySlug(slug: string) { return (await this.load()).listings.find((l) => l.slug === slug) ?? null }
   async active() { return (await this.load()).listings.filter((l) => l.status === 'active') }
+  async settlePayment(orderId: string, listingId: string, detail: Record<string, unknown>, days: number) {
+    const d = await this.load()
+    if (d.payments[orderId]) return null
+    const l = d.listings.find((x) => x.id === listingId)
+    if (!l) throw new Error('unknown listing')
+    const until = extendUntil(l.paid_until, days)
+    d.payments[orderId] = { listingId, ...detail, at: now() }
+    l.orders = [...l.orders, orderId]
+    l.status = 'active'
+    l.paid_until = until
+    await this.save(d)
+    return until
+  }
   async recordPayment(orderId: string, listingId: string, detail: Record<string, unknown>) {
     const d = await this.load()
     if (d.payments[orderId]) return false
@@ -102,6 +117,36 @@ export class SupabaseStore implements Store {
   get = (id: string) => this.one(`select=*&id=eq.${encodeURIComponent(id)}`)
   bySlug = (slug: string) => this.one(`select=*&slug=eq.${encodeURIComponent(slug)}`)
   async active() { return (await this.rest('listings?select=*&status=eq.active&order=created_at.desc&limit=1000')) as Listing[] }
+  async recordPayment(orderId: string, listingId: string, detail: Record<string, unknown>) {
+    const rows = (await this.rest('membership_payments?on_conflict=order_id', {
+      method: 'POST', body: JSON.stringify({ order_id: orderId, listing_id: listingId, detail }),
+    }, 'resolution=ignore-duplicates,return=representation')) as unknown[]
+    return rows.length > 0
+  }
+  async activate(id: string, paidUntil: string) {
+    await this.rest(`listings?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status: 'active', paid_until: paidUntil }) })
+  }
+}
+
+let cached: Store | null = null
+export function store(): Store {
+  if (cached) return cached
+  const { SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key } = process.env
+  cached = url && key ? new SupabaseStore(url, key) : new FileStore()
+  return cached
+}
+export const setStore = (s: Store | null) => { cached = s }
+
+/** Every public listing: DansLab's founding projects plus everyone's active ones. */
+export async function everything(): Promise<Listing[]> {
+  let mine: Listing[] = []
+  try { mine = await store().active() } catch (e) { console.error('listings unavailable', e) }
+  return [...FOUNDING, ...mine]
+}  async settlePayment(orderId: string, listingId: string, detail: Record<string, unknown>, days: number) {
+    return await this.rest('rpc/settle_market_membership', {
+      method: 'POST', body: JSON.stringify({ p_order_id: orderId, p_listing_id: listingId, p_detail: detail, p_days: days }),
+    }) as string | null
+  }
   async recordPayment(orderId: string, listingId: string, detail: Record<string, unknown>) {
     const rows = (await this.rest('membership_payments?on_conflict=order_id', {
       method: 'POST', body: JSON.stringify({ order_id: orderId, listing_id: listingId, detail }),

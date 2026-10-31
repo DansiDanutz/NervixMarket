@@ -31,3 +31,30 @@ create table if not exists membership_payments (
 
 alter table listings enable row level security;
 alter table membership_payments enable row level security;
+
+-- Atomically remember payment and activate membership; retries never extend twice.
+create or replace function public.settle_market_membership(
+  p_order_id text, p_listing_id text, p_detail jsonb, p_days integer
+) returns timestamptz
+language plpgsql security invoker set search_path = '' as $$
+declare
+  current_until timestamptz;
+  next_until timestamptz;
+  inserted_order text;
+begin
+  if p_order_id is null or p_order_id = '' or p_days is null or p_days < 1 or p_days > 3660 then
+    raise exception 'invalid membership payment';
+  end if;
+  select paid_until into current_until from public.listings where id = p_listing_id for update;
+  if not found then raise exception 'unknown listing'; end if;
+  insert into public.membership_payments(order_id, listing_id, detail)
+    values(p_order_id, p_listing_id, p_detail)
+    on conflict(order_id) do nothing returning order_id into inserted_order;
+  if inserted_order is null then return null; end if;
+  next_until := greatest(coalesce(current_until, now()), now()) + make_interval(days => p_days);
+  update public.listings set status = 'active', paid_until = next_until where id = p_listing_id;
+  return next_until;
+end;
+$$;
+revoke all on function public.settle_market_membership(text, text, jsonb, integer) from public, anon, authenticated;
+grant execute on function public.settle_market_membership(text, text, jsonb, integer) to service_role;
