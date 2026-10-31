@@ -122,3 +122,29 @@ describe('supabase keys', () => {
     expect(seen[1].get('authorization')).toBe('Bearer eyJhbGciOi.legacy')
   })
 })
+
+describe('failure recovery', () => {
+  it('returns a retryable JSON response when listing storage fails', async () => {
+    const s = new FileStore('/unused')
+    s.create = async () => { throw new Error('database unavailable') }
+    setStore(s)
+    const r = await listPOST(new Request('http://x/api/listings', { method: 'POST', body: JSON.stringify(good) }))
+    expect(r.status).toBe(503)
+    expect(await r.json()).toEqual({ error: 'Unable to save your listing right now. Please try again shortly.' })
+  })
+  it('records payment and activation together rather than using separate writes', async () => {
+    const s = new FileStore(path.join(mkdtempSync(path.join(tmpdir(), 'nm-')), 'l.json'))
+    s.activate = async () => { throw new Error('separate activation failed') }
+    setStore(s)
+    process.env.NERVIXPAY_LINK_ID = 'link-123'
+    process.env.NERVIXPAY_WEBHOOK_SECRET = SECRET
+    const l = await s.create(good)
+    const body = JSON.stringify(paid({ customerReference: l.id, orderId: 'atomic-order' }))
+    const deliver = () => hook(new Request('http://x/api/webhooks/nervixpay', { method: 'POST', body, headers: { 'x-nervixpay-signature': sign(body) } }))
+    expect((await deliver()).status).toBe(200)
+    const first = await s.get(l.id)
+    expect(first?.status).toBe('active')
+    expect((await (await deliver()).json()).duplicate).toBe(true)
+    expect((await s.get(l.id))?.paid_until).toBe(first?.paid_until)
+  })
+})
