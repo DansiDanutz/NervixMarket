@@ -3,8 +3,10 @@ import Link from 'next/link'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Nervix Market · the AI Business Network',
-  description: 'List your AI project to be used or sold, in the DansLab AI Business Network. Membership 10 USD in USDT or USDC, paid with NervixPay.',
+  metadataBase: new URL(process.env.SITE_URL || 'https://nervix.space'),
+  title: 'Nervix Space · the AI Business Network',
+  description: 'The space where builders share AI ideas, app demos and production-ready apps, to be used or sold. The first 200 projects join for free.',
+  openGraph: { title: 'Nervix Space', description: 'Share your AI build: ideas, app demos, production-ready apps. The first 200 projects join free.', url: '/', siteName: 'Nervix Space' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -18,18 +20,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="top">
           <div className="wrap">
-            <Link href="/" className="brand"><i /> Nervix <b>Market</b></Link>
+            <Link href="/" className="brand"><i /> Nervix <b>Space</b></Link>
             <nav>
-              <Link href="/#directory">Directory</Link>
+              <Link href="/#directory">Explore</Link>
               <a href="https://nervixpay.live" target="_blank" rel="noreferrer">NervixPay</a>
-              <Link href="/list" className="btn">List your AI business</Link>
+              <Link href="/list" className="btn">Join the space</Link>
             </nav>
           </div>
         </header>
         {children}
         <footer className="bot">
           <div className="wrap">
-            <span>Nervix Market · part of the DansLab AI Business Network</span>
+            <span>Nervix Space · part of the DansLab AI Business Network</span>
             <span>Memberships paid with <a href="https://nervixpay.live">NervixPay</a>: wallet to wallet, verified on-chain, never custodied.</span>
           </div>
         </footer>

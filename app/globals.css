@@ -30,6 +30,11 @@ header.top nav .btn { color: #0b0920; padding: 7px 12px }
 .hero p.lead { font-size: 18px; color: var(--muted); max-width: 58ch; margin: 0 0 26px }
 .hero .ctas { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
 .hero .price { font: 500 13px var(--mono); color: var(--muted) }
+.spots { margin-top: 22px; max-width: 560px }
+.spots .bar { height: 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden }
+.spots .bar i { display: block; height: 100%; min-width: 4px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 16px rgba(45,226,196,.5) }
+.spots span { display: block; margin-top: 8px; font: 500 13px var(--mono); color: var(--muted) }
+.spots b { color: var(--accent-2) }
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 40px 0 0 }
 .steps div { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(15,17,26,.6) }
 .steps b { display: block; font-family: var(--display); font-size: 15px; margin-bottom: 4px }

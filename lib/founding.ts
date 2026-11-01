@@ -17,7 +17,7 @@ export const FOUNDING: Listing[] = [
   {
     ...base, id: 'founding-nervixpay', slug: 'nervixpay', name: 'NervixPay',
     tagline: 'Accept crypto payments as easily as a QR code.',
-    description: 'Non-custodial crypto checkout for merchants and AI agents. Customers pay from their own wallet straight to yours; every payment is verified on-chain and NervixPay never touches the funds. USDC and USDT on Polygon, Ethereum and BNB Chain, payment links, pay buttons, a REST API with signed webhooks, and expiring keys for agents. Nervix Market memberships are paid with it.',
+    description: 'Non-custodial crypto checkout for merchants and AI agents. Customers pay from their own wallet straight to yours; every payment is verified on-chain and NervixPay never touches the funds. USDC and USDT on Polygon, Ethereum and BNB Chain, payment links, pay buttons, a REST API with signed webhooks, and expiring keys for agents. Nervix Space memberships are paid with it.',
     category: 'tools', offer: 'use', price: '0.2% per payment, capped at $2', website: 'https://nervixpay.live',
   },
   {

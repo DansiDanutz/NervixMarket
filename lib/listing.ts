@@ -1,4 +1,4 @@
-/** A listing in Nervix Market, and the rules for creating one. No dependencies: shared by the
+/** A listing in Nervix Space, and the rules for creating one. No dependencies: shared by the
  *  API routes, the pages and the tests. */
 
 export const CATEGORIES = [
@@ -72,7 +72,7 @@ export function validate(raw: Partial<Record<keyof ListingInput, unknown>>):
   }
   const e: Record<string, string> = {}
   for (const [k, max] of Object.entries(LIMITS)) if ((v[k as keyof ListingInput] ?? '').length > max) e[k] = `At most ${max} characters.`
-  if (v.name.length < 2) e.name = 'Give your AI business a name.'
+  if (v.name.length < 2) e.name = 'Give your project a name.'
   if (v.tagline.length < 8) e.tagline = 'One line on what it does.'
   if (v.description.length < 40) e.description = 'Describe it in at least a couple of sentences.'
   if (!CATEGORIES.some((c) => c.id === v.category)) e.category = 'Pick a category.'
@@ -83,6 +83,14 @@ export function validate(raw: Partial<Record<keyof ListingInput, unknown>>):
   if (!isEmail(v.owner_email)) e.owner_email = 'Your email, for the receipt (never shown).'
   return Object.keys(e).length ? { ok: false, errors: e } : { ok: true, value: v }
 }
+
+/** The first FREE_SPOTS projects join for free, for good: their listing goes live at once and is
+ *  marked by a paid_until far in the future (no schema change). Listing FREE_SPOTS+1 onwards pays the membership. */
+export const FREE_SPOTS = 200
+/** Override with the FREE_SPOTS env var (0 switches free spots off). */
+export const freeSpots = () => { const n = Number(process.env.FREE_SPOTS); return Number.isFinite(n) && process.env.FREE_SPOTS !== undefined && process.env.FREE_SPOTS !== '' ? n : FREE_SPOTS }
+export const FREE_UNTIL = '2999-12-31T00:00:00.000Z'
+export const isFree = (l: Pick<Listing, 'paid_until'>) => l.paid_until === FREE_UNTIL
 
 export const isLive = (l: Pick<Listing, 'status' | 'paid_until' | 'founding'>, now = Date.now()) =>
   l.status === 'active' && (!!l.founding || (!!l.paid_until && Date.parse(l.paid_until) > now))

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { isLive } from '@/lib/listing'
+import { isFree, isLive } from '@/lib/listing'
 import { checkoutUrl, config } from '@/lib/nervixpay'
 import { store } from '@/lib/store'
 import { Poll } from './poll'
@@ -20,12 +20,12 @@ export default async function Pending({ params }: { params: Promise<{ id: string
   return (
     <main className="wrap page">
       <div className="eyebrow">{l.name}</div>
-      <h1>{live ? 'You’re in the network.' : 'One step left: the membership.'}</h1>
+      <h1>{live ? 'You’re in the space.' : 'One step left: the membership.'}</h1>
       <div className="box">
         <p><span className={`status ${live ? 'live' : ''}`}>{live ? 'LIVE' : 'WAITING FOR PAYMENT'}</span></p>
         {live ? (
           <>
-            <p>Your listing is public until {new Date(l.paid_until!).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+            <p>{isFree(l) ? 'Your page is public, on a free founding spot.' : <>Your listing is public until {new Date(l.paid_until!).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.</>}</p>
             <Link className="btn" href={`/l/${l.slug}`}>See your page →</Link>
           </>
         ) : (

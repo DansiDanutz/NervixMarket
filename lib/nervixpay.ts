@@ -50,7 +50,7 @@ export interface PaidEvent {
   customerEmail: string | null
 }
 
-/** Is this payment a Nervix Market membership? Returns why not, or null when it counts. */
+/** Is this payment a Nervix Space membership? Returns why not, or null when it counts. */
 export function membershipProblem(e: PaidEvent, c = config()): string | null {
   if (e.event !== 'payment.paid') return 'not a payment'
   if (c.linkId && e.paymentLinkId !== c.linkId) return 'another payment link'

@@ -16,7 +16,7 @@ async function find(slug: string): Promise<Listing | null> {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const l = await find((await params).slug)
-  return l ? { title: `${l.name} · Nervix Market`, description: l.tagline } : {}
+  return l ? { title: `${l.name} · Nervix Space`, description: l.tagline } : {}
 }
 
 const contactHref = (c: string) =>

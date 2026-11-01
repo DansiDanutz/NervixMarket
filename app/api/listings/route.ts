@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { search, toPublic, validate } from '@/lib/listing'
+import { FREE_UNTIL, search, toPublic, validate } from '@/lib/listing'
 import { checkoutUrl } from '@/lib/nervixpay'
-import { everything, store } from '@/lib/store'
+import { everything, freeLeft, store } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,10 +11,11 @@ export async function GET(req: Request) {
   const found = search((await everything()).map(toPublic), {
     q: p.get('q') ?? undefined, category: p.get('category') ?? undefined, offer: p.get('offer') ?? undefined,
   })
-  return NextResponse.json({ count: found.length, listings: found })
+  return NextResponse.json({ count: found.length, free_spots_left: await freeLeft(), listings: found })
 }
 
-/** Submit a listing. It stays pending (not public) until its 10 USD membership is paid. */
+/** Submit a listing. While free spots are left it goes live at once, for free; after that it stays pending
+ *  (not public) until its 10 USD membership is paid. */
 export async function POST(req: Request) {
   if (process.env.VERCEL && store().kind === 'file') {
     // a hosted site needs the database; the file store is for local development only
@@ -22,10 +23,18 @@ export async function POST(req: Request) {
   }
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Send JSON.' }, { status: 400 }) }
-  const v = validate((body ?? {}) as Record<string, unknown>)
+  const raw = (body ?? {}) as Record<string, unknown>
+  // a field people never see: bots fill it in
+  if (typeof raw.company === 'string' && raw.company.trim()) return NextResponse.json({ error: 'Unable to save your listing.' }, { status: 400 })
+  const v = validate(raw)
   if (!v.ok) return NextResponse.json({ errors: v.errors }, { status: 422 })
   try {
+    const free = (await freeLeft()) > 0
     const l = await store().create(v.value)
+    if (free) {
+      await store().activate(l.id, FREE_UNTIL)
+      return NextResponse.json({ id: l.id, slug: l.slug, status: 'active', free: true, page: `/l/${l.slug}`, pending: `/pending/${l.id}` }, { status: 201 })
+    }
     return NextResponse.json({ id: l.id, slug: l.slug, status: l.status, checkout: checkoutUrl(l.id, l.owner_email), pending: `/pending/${l.id}` }, { status: 201 })
   } catch (err) {
     console.error('listing submission failed', err)

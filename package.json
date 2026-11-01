@@ -2,7 +2,7 @@
   "name": "nervix-market",
   "private": true,
   "version": "0.1.0",
-  "description": "Nervix Market: list your AI business in the DansLab AI Business Network. Membership 10 USD in USDT/USDC via NervixPay.",
+  "description": "Nervix Space: the space where builders share AI ideas, app demos and production-ready apps. First 200 projects free, then 10 USD in USDT/USDC via NervixPay.",
   "scripts": {
     "dev": "next dev -p 3300",
     "build": "next build",

@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { isLive, search, slugify, toPublic, validate } from '@/lib/listing'
+import { FREE_UNTIL, isFree, isLive, search, slugify, toPublic, validate } from '@/lib/listing'
 import { checkoutUrl, extendUntil, membershipProblem, verifySignature, type PaidEvent } from '@/lib/nervixpay'
 import { FileStore, setStore } from '@/lib/store'
 import { FOUNDING } from '@/lib/founding'
@@ -75,6 +75,7 @@ describe('end to end: submit → pay → live', () => {
     setStore(new FileStore(path.join(mkdtempSync(path.join(tmpdir(), 'nm-')), 'l.json')))
     process.env.NERVIXPAY_LINK_ID = 'link-123'
     process.env.NERVIXPAY_WEBHOOK_SECRET = SECRET
+    process.env.FREE_SPOTS = '0' // the paid path; free spots are tested below
   })
   const post = (body: unknown) => new Request('http://x/api/listings', { method: 'POST', body: JSON.stringify(body) })
   const deliver = (e: PaidEvent, sig?: string) => {
@@ -107,6 +108,40 @@ describe('end to end: submit → pay → live', () => {
     const r = await listPOST(post({ ...good, website: 'nope' }))
     expect(r.status).toBe(422)
     expect((await r.json()).errors.website).toBeTruthy()
+  })
+})
+
+describe('free founding spots', () => {
+  beforeEach(() => {
+    setStore(new FileStore(path.join(mkdtempSync(path.join(tmpdir(), 'nm-')), 'l.json')))
+    process.env.NERVIXPAY_LINK_ID = 'link-123'
+    process.env.FREE_SPOTS = '2'
+  })
+  const post = (body: unknown) => new Request('http://x/api/listings', { method: 'POST', body: JSON.stringify(body) })
+  const left = async () => (await (await listGET(new Request('http://x/api/listings'))).json()).free_spots_left
+
+  it('the first N projects go live at once for free, then the membership applies', async () => {
+    expect(await left()).toBe(2)
+    const a = await (await listPOST(post({ ...good, name: 'Alpha One' }))).json()
+    expect(a).toMatchObject({ status: 'active', free: true, page: '/l/alpha-one' })
+    const b = await (await listPOST(post({ ...good, name: 'Beta Two' }))).json()
+    expect(b.free).toBe(true)
+    expect(await left()).toBe(0)
+    const c = await (await listPOST(post({ ...good, name: 'Gamma Three' }))).json()
+    expect(c.free).toBeUndefined()
+    expect(c.status).toBe('pending')
+    expect(c.checkout).toContain(`ref=${c.id}`)
+    const live = (await (await listGET(new Request('http://x/api/listings?q=one two three'))).json())
+    expect(live.count).toBe(0)
+    const names = (await (await listGET(new Request('http://x/api/listings'))).json()).listings.map((l: { name: string }) => l.name)
+    expect(names).toEqual(expect.arrayContaining(['Alpha One', 'Beta Two']))
+    expect(names).not.toContain('Gamma Three')
+    expect(isFree({ paid_until: FREE_UNTIL }) && isLive({ status: 'active', paid_until: FREE_UNTIL })).toBe(true)
+  })
+  it('bots that fill the hidden field are turned away', async () => {
+    const r = await listPOST(post({ ...good, company: 'spam inc' }))
+    expect(r.status).toBe(400)
+    expect(await left()).toBe(2)
   })
 })
 

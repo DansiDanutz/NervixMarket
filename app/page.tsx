@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { CATEGORIES, OFFERS, search, toPublic, type PublicListing } from '@/lib/listing'
 import { MEMBERSHIP_USD } from '@/lib/nervixpay'
-import { everything } from '@/lib/store'
+import { everything, freeLeft } from '@/lib/store'
+import { freeSpots } from '@/lib/listing'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,31 +36,42 @@ function ListingCard({ l }: { l: PublicListing }) {
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const p = await searchParams
   const found = search((await everything()).map(toPublic), p)
+  const left = await freeLeft()
+  const free = left > 0
+  const FREE_SPOTS = freeSpots()
   return (
     <main>
       <section className="hero wrap">
         <div className="eyebrow">The DansLab AI Business Network</div>
-        <h1>List your AI business. <em>Get found, used, or sold.</em></h1>
+        <h1>A space for what you build with AI. <em>Show it. Share it. Sell it.</em></h1>
         <p className="lead">
-          Nervix Market is where builders put their AI projects in front of people looking for them: apps, agents,
-          tools, and whole businesses for sale. One membership, paid in stablecoins, and you&apos;re in the network.
+          Nervix Space is where builders bring their AI work into the light: an idea, an app demo, or a
+          production-ready app for sale. People come here to find it, use it, or buy it.
         </p>
         <div className="ctas">
-          <Link href="/list" className="btn">List your AI business · {MEMBERSHIP_USD} USD</Link>
-          <a href="#directory" className="btn ghost">Browse the directory</a>
-          <span className="price">USDT or USDC · paid with NervixPay</span>
+          <Link href="/list" className="btn">{free ? 'Join the space · free' : `Join the space · ${MEMBERSHIP_USD} USD`}</Link>
+          <a href="#directory" className="btn ghost">Explore the space</a>
+          <span className="price">{free ? `${left} of ${FREE_SPOTS} free founding spots left` : 'USDT or USDC · paid with NervixPay'}</span>
         </div>
+        {free && (
+          <div className="spots" aria-label={`${FREE_SPOTS - left} of ${FREE_SPOTS} founding spots taken`}>
+            <div className="bar"><i style={{ width: `${((FREE_SPOTS - left) / FREE_SPOTS) * 100}%` }} /></div>
+            <span>The first {FREE_SPOTS} projects join for free, for good. <b>{left} spots left.</b></span>
+          </div>
+        )}
         <div className="steps">
-          <div><i>01</i><b>Describe it</b><span>Name, what it does, the price, and how people reach you.</span></div>
-          <div><i>02</i><b>Pay {MEMBERSHIP_USD} USD in USDT/USDC</b><span>From your own wallet, through NervixPay. Verified on-chain.</span></div>
-          <div><i>03</i><b>You&apos;re live</b><span>Your page goes public the moment the payment is confirmed.</span></div>
+          <div><i>01</i><b>Describe it</b><span>What you built, who it&apos;s for, the price, and how people reach you.</span></div>
+          {free
+            ? <div><i>02</i><b>Take a founding spot</b><span>Free for the first {FREE_SPOTS} projects. After that, {MEMBERSHIP_USD} USD in USDT/USDC through NervixPay.</span></div>
+            : <div><i>02</i><b>Pay {MEMBERSHIP_USD} USD in USDT/USDC</b><span>From your own wallet, through NervixPay. Verified on-chain.</span></div>}
+          <div><i>03</i><b>You&apos;re in the space</b><span>Your own page goes live{free ? ' the moment you submit.' : ' the moment the payment is confirmed.'}</span></div>
         </div>
       </section>
 
       <section className="dir wrap" id="directory">
-        <h2>Directory</h2>
+        <h2>Explore the space</h2>
         <form className="search" action="/#directory">
-          <input name="q" defaultValue={p.q ?? ''} placeholder="Search AI apps, agents, tools…" aria-label="Search" />
+          <input name="q" defaultValue={p.q ?? ''} placeholder="Search ideas, app demos, AI apps, agents…" aria-label="Search" />
           {p.category && <input type="hidden" name="category" value={p.category} />}
           {p.offer && <input type="hidden" name="offer" value={p.offer} />}
           <button className="btn ghost" type="submit">Search</button>
@@ -74,7 +86,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         </div>
         {found.length
           ? <div className="grid">{found.map((l) => <ListingCard key={l.id} l={l} />)}</div>
-          : <div className="empty">Nothing matches yet. <Link href="/list">Be the first to list it.</Link></div>}
+          : <div className="empty">Nothing matches yet. <Link href="/list">Be the first to bring it into the space.</Link></div>}
       </section>
     </main>
   )
