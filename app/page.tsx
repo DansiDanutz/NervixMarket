@@ -3,6 +3,7 @@ import { CATEGORIES, OFFERS, search, toPublic, type PublicListing } from '@/lib/
 import { MEMBERSHIP_USD } from '@/lib/nervixpay'
 import { everything, freeLeft } from '@/lib/store'
 import { freeSpots } from '@/lib/listing'
+import { Logo } from './logo'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,29 +43,49 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   return (
     <main>
       <section className="hero wrap">
-        <div className="eyebrow">The DansLab AI Business Network</div>
-        <h1>A space for what you build with AI. <em>Show it. Share it. Sell it.</em></h1>
-        <p className="lead">
-          Nervix Space is where builders bring their AI work into the light: an idea, an app demo, or a
-          production-ready app for sale. People come here to find it, use it, or buy it.
-        </p>
-        <div className="ctas">
-          <Link href="/list" className="btn">{free ? 'Join the space · free' : `Join the space · ${MEMBERSHIP_USD} USD`}</Link>
-          <a href="#directory" className="btn ghost">Explore the space</a>
-          <span className="price">{free ? `${left} of ${FREE_SPOTS} free founding spots left` : 'USDT or USDC · paid with NervixPay'}</span>
-        </div>
-        {free && (
-          <div className="spots" aria-label={`${FREE_SPOTS - left} of ${FREE_SPOTS} founding spots taken`}>
-            <div className="bar"><i style={{ width: `${((FREE_SPOTS - left) / FREE_SPOTS) * 100}%` }} /></div>
-            <span>The first {FREE_SPOTS} projects join for free, for good. <b>{left} spots left.</b></span>
+        <div className="hero-grid">
+          <div>
+            <div className="eyebrow">The DansLab AI Business Network</div>
+            <h1>A space for what you build with AI. <em>Show it. Share it. Sell it.</em></h1>
+            <p className="lead">
+              Nervix Space is where builders bring their AI work into the light: an idea, an app demo, or a
+              production-ready app for sale. People come here to find it, use it, or buy it.
+            </p>
+            <div className="ctas">
+              <Link href="/list" className="btn">{free ? 'Take a free spot' : `Join · ${MEMBERSHIP_USD} USD a month`}</Link>
+              <a href="#directory" className="btn ghost">Explore the space</a>
+            </div>
+            {free && (
+              <div className="spots" aria-label={`${FREE_SPOTS - left} of ${FREE_SPOTS} founding spots taken`}>
+                <div className="bar"><i style={{ width: `${((FREE_SPOTS - left) / FREE_SPOTS) * 100}%` }} /></div>
+                <span><b>{left} of {FREE_SPOTS}</b> free founding spots left</span>
+              </div>
+            )}
           </div>
-        )}
-        <div className="steps">
-          <div><i>01</i><b>Describe it</b><span>What you built, who it&apos;s for, the price, and how people reach you.</span></div>
-          {free
-            ? <div><i>02</i><b>Take a founding spot</b><span>Free for the first {FREE_SPOTS} projects. After that, {MEMBERSHIP_USD} USD in USDT/USDC through NervixPay.</span></div>
-            : <div><i>02</i><b>Pay {MEMBERSHIP_USD} USD in USDT/USDC</b><span>From your own wallet, through NervixPay. Verified on-chain.</span></div>}
-          <div><i>03</i><b>You&apos;re in the space</b><span>Your own page goes live{free ? ' the moment you submit.' : ' the moment the payment is confirmed.'}</span></div>
+          <div className="orbit" aria-hidden="true">
+            <div className="core"><Logo size={64} /></div>
+            <div className="ring r1"><span>Ideas</span></div>
+            <div className="ring r2"><span>App demos</span></div>
+            <div className="ring r3"><span>Production apps</span></div>
+          </div>
+        </div>
+
+        <div className="plans">
+          <div className={`plan ${free ? 'on' : ''}`}>
+            <i>Founding 200</i>
+            <b>Listed for free</b>
+            <span>The first {FREE_SPOTS} projects in the space are listed free, for good, live the moment they are submitted.{free ? ` ${left} spots left.` : ' All taken.'}</span>
+          </div>
+          <div className={`plan ${free ? '' : 'on'}`}>
+            <i>From project {FREE_SPOTS + 1}</i>
+            <b>{MEMBERSHIP_USD} USD a month</b>
+            <span>Paid in USDT or USDC through NervixPay, from your own wallet. Verified on-chain, never held by anyone.</span>
+          </div>
+          <div className="plan">
+            <i>Every project</i>
+            <b>Its own page</b>
+            <span>What it does, the price, and how to reach you. People search by category and come straight to you.</span>
+          </div>
         </div>
       </section>
 

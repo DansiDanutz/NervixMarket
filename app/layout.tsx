@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import './globals.css'
+import { Logo } from './logo'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'https://nervix.space'),
@@ -18,9 +19,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
       </head>
       <body>
+        <div className="sky" aria-hidden="true" />
         <header className="top">
           <div className="wrap">
-            <Link href="/" className="brand"><i /> Nervix <b>Space</b></Link>
+            <Link href="/" className="brand"><Logo /> Nervix <b>Space</b></Link>
             <nav>
               <Link href="/#directory">Explore</Link>
               <a href="https://nervixpay.live" target="_blank" rel="noreferrer">NervixPay</a>
@@ -31,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <footer className="bot">
           <div className="wrap">
-            <span>Nervix Space · part of the DansLab AI Business Network</span>
+            <span><b className="foot-brand">Nervix Space</b> · nervix.space · part of the DansLab AI Business Network</span>
             <span>Memberships paid with <a href="https://nervixpay.live">NervixPay</a>: wallet to wallet, verified on-chain, never custodied.</span>
           </div>
         </footer>

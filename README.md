@@ -7,7 +7,7 @@ Network: anyone can bring an idea, an app demo, or a production-ready app (to us
   as soon as it is submitted. Free listings are marked by `paid_until = FREE_UNTIL` (2999-12-31), so no schema change.
 - From project 201 on, a listing goes public once its **10 USD membership** is paid in **USDT or USDC through
   NervixPay** (wallet to wallet, verified on-chain, never custodied). Membership lasts `MEMBERSHIP_DAYS`
-  (365 by default); paying again extends it.
+  (30 by default: 10 USD a month); paying again extends it by another month.
 
 ## How the payment works (after the free spots)
 1. The form creates a **pending** listing (not public) and sends the owner to the NervixPay membership

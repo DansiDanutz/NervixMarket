@@ -13,7 +13,7 @@ export const config = () => ({
   base: (process.env.NERVIXPAY_BASE_URL || 'https://nervixpay.live').replace(/\/$/, ''),
   linkId: process.env.NERVIXPAY_LINK_ID || '',
   secret: process.env.NERVIXPAY_WEBHOOK_SECRET || '',
-  membershipDays: Number(process.env.MEMBERSHIP_DAYS || 365),
+  membershipDays: Number(process.env.MEMBERSHIP_DAYS || 30),
 })
 
 /** The hosted checkout for one listing. */

@@ -74,7 +74,7 @@ export function ListForm({ freeLeft, spots }: { freeLeft: number; spots: number 
         <div className="payline">
           {free
             ? <div><b>Free · founding spot</b><small>One of the first {spots} projects in Nervix Space: free, for good. {freeLeft} spots left.</small></div>
-            : <div><b>10 USD membership</b><small>Paid in USDT or USDC with NervixPay, from your own wallet. Valid for one year.</small></div>}
+            : <div><b>10 USD a month</b><small>Paid in USDT or USDC with NervixPay, from your own wallet. Each payment keeps your page live for a month.</small></div>}
           <button className="btn" disabled={busy}>{busy ? 'Saving…' : free ? 'Join for free →' : 'Continue to payment →'}</button>
         </div>
         {fail && <span className="err">{fail}</span>}

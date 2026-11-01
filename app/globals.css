@@ -1,23 +1,39 @@
 :root {
-  --bg: #07080d; --panel: #0f111a; --panel-2: #141725; --line: rgba(255,255,255,.09); --fg: #eef0f7; --muted: #8e93a8;
-  --accent: #7c5cff; --accent-2: #2de2c4; --warn: #ffb547; --ok: #2de2c4;
+  --bg: #04050d; --panel: #0b0d1c; --panel-2: #11142a; --line: rgba(190,200,255,.10); --fg: #eef0fb; --muted: #8f95b2;
+  --accent: #8b5cf6; --accent-2: #22d3ee; --warn: #ffb547; --ok: #2de2c4;
   --display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; --body: 'Inter', ui-sans-serif, system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
   color-scheme: dark;
 }
 * { box-sizing: border-box }
 html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55 }
-body { background: radial-gradient(1200px 500px at 70% -10%, rgba(124,92,255,.18), transparent 60%), radial-gradient(900px 400px at 0% 0%, rgba(45,226,196,.08), transparent 60%), var(--bg) }
+body { background: radial-gradient(1100px 620px at 78% -8%, rgba(139,92,246,.24), transparent 62%), radial-gradient(900px 520px at -5% 18%, rgba(34,211,238,.10), transparent 60%), radial-gradient(800px 500px at 50% 110%, rgba(139,92,246,.10), transparent 60%), var(--bg); min-height: 100vh }
+/* the sky: two layers of stars, drifting very slowly */
+.sky { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .9;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 27% 72%, #cfd6ff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 41% 33%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 58% 84%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 66% 12%, #b9c4ff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 79% 47%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 76%, #e5e9ff 50%, transparent 51%), radial-gradient(1px 1px at 95% 22%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 6% 58%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 35% 92%, #cfd6ff 50%, transparent 51%);
+  background-size: 640px 640px; animation: drift 240s linear infinite }
+.sky::after { content: ''; position: absolute; inset: 0; background-image:
+    radial-gradient(1px 1px at 22% 40%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 49% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 73% 63%, #dfe4ff 50%, transparent 51%), radial-gradient(1px 1px at 91% 91%, #fff 50%, transparent 51%);
+  background-size: 410px 410px; opacity: .6; animation: twinkle 6s ease-in-out infinite alternate }
+@keyframes drift { to { background-position: -640px 320px } }
+@keyframes twinkle { from { opacity: .25 } to { opacity: .75 } }
+@media (prefers-reduced-motion: reduce) { .sky, .sky::after, .orbit .ring, .orbit .ring span { animation: none } }
 a { color: inherit }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px }
 header.top { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); background: rgba(7,8,13,.7); border-bottom: 1px solid var(--line) }
 header.top .wrap { display: flex; align-items: center; gap: 18px; height: 60px }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -.01em }
-.brand i { width: 26px; height: 26px; border-radius: 8px; background: conic-gradient(from 210deg, var(--accent), var(--accent-2), var(--accent)); box-shadow: 0 0 24px rgba(124,92,255,.5) }
+.brand svg { filter: drop-shadow(0 0 10px rgba(139,92,246,.6)) }
 .brand b { font-weight: 400; color: var(--muted) }
 header.top nav { margin-left: auto; display: flex; gap: 6px; align-items: center }
 header.top nav a { text-decoration: none; color: var(--muted); padding: 6px 10px; border-radius: 8px; font-size: 14px }
 header.top nav a:hover { color: var(--fg) }
-.btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; text-decoration: none; font: 600 14px var(--body); padding: 10px 16px; border-radius: 10px; color: #0b0920; background: linear-gradient(135deg, #a993ff, var(--accent)); box-shadow: 0 6px 24px rgba(124,92,255,.35) }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; text-decoration: none; font: 600 14px var(--body); padding: 11px 18px; border-radius: 999px; color: #070818; background: linear-gradient(135deg, #c4b5fd, var(--accent) 55%, #6d4ef0); box-shadow: 0 6px 26px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.35) }
 .btn:hover { filter: brightness(1.08) }
 .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); box-shadow: none }
 .btn:disabled { opacity: .5; cursor: default }
@@ -26,7 +42,7 @@ header.top nav .btn { color: #0b0920; padding: 7px 12px }
 .hero { padding-block: 72px 36px }
 .eyebrow { font: 500 12px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent-2) }
 .hero h1 { font-family: var(--display); font-size: clamp(36px, 6vw, 64px); line-height: 1.02; letter-spacing: -.03em; margin: 14px 0 16px; max-width: 14ch }
-.hero h1 em { font-style: normal; background: linear-gradient(90deg, #b9a7ff, var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent }
+.hero h1 em { font-style: normal; background: linear-gradient(90deg, #c4b5fd, #8b5cf6 40%, var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent }
 .hero p.lead { font-size: 18px; color: var(--muted); max-width: 58ch; margin: 0 0 26px }
 .hero .ctas { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
 .hero .price { font: 500 13px var(--mono); color: var(--muted) }
@@ -96,3 +112,28 @@ footer.bot .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-conten
   header.top nav a:not(.btn) { display: none }
   .facts { grid-template-columns: 1fr }
 }
+
+/* hero with the orbit */
+.hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px; align-items: center }
+.orbit { position: relative; aspect-ratio: 1; max-width: 440px; width: 100%; justify-self: end }
+.orbit .core { position: absolute; inset: 0; display: grid; place-items: center }
+.orbit .core svg { filter: drop-shadow(0 0 36px rgba(139,92,246,.75)) drop-shadow(0 0 70px rgba(34,211,238,.25)) }
+.orbit .ring { position: absolute; border-radius: 50%; border: 1px solid rgba(190,200,255,.16); animation: spin linear infinite }
+.orbit .r1 { inset: 26%; animation-duration: 26s }
+.orbit .r2 { inset: 12%; animation-duration: 40s; animation-direction: reverse; border-style: dashed }
+.orbit .r3 { inset: 0; animation-duration: 58s }
+.orbit .ring span { position: absolute; top: -15px; left: 50%; translate: -50% 0; white-space: nowrap; font: 600 12.5px var(--body);
+  padding: 6px 12px; border-radius: 999px; color: var(--fg); background: rgba(11,13,28,.9); border: 1px solid rgba(34,211,238,.45);
+  box-shadow: 0 0 18px rgba(34,211,238,.25); animation: spin linear infinite reverse }
+.orbit .r1 span { animation-duration: 26s } .orbit .r2 span { animation-duration: 40s; animation-direction: normal } .orbit .r3 span { animation-duration: 58s }
+@keyframes spin { to { transform: rotate(360deg) } }
+.orbit .ring span { transform-origin: center }
+/* plans */
+.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 44px }
+.plan { padding: 18px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(17,20,42,.75), rgba(11,13,28,.75)); backdrop-filter: blur(6px) }
+.plan i { display: block; font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-2); font-style: normal; margin-bottom: 8px }
+.plan b { display: block; font: 700 22px var(--display); letter-spacing: -.01em; margin-bottom: 6px }
+.plan span { color: var(--muted); font-size: 13.5px }
+.plan.on { border-color: rgba(139,92,246,.55); box-shadow: 0 0 0 1px rgba(139,92,246,.25), 0 10px 40px rgba(139,92,246,.18) }
+.foot-brand { color: var(--fg); font-weight: 600 }
+@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr } .orbit { max-width: 300px; justify-self: center; margin-top: 10px } .plans { grid-template-columns: 1fr } }
