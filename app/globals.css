@@ -137,3 +137,31 @@ footer.bot .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-conten
 .plan.on { border-color: rgba(139,92,246,.55); box-shadow: 0 0 0 1px rgba(139,92,246,.25), 0 10px 40px rgba(139,92,246,.18) }
 .foot-brand { color: var(--fg); font-weight: 600 }
 @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr } .orbit { max-width: 300px; justify-self: center; margin-top: 10px } .plans { grid-template-columns: 1fr } }
+/* open listings */
+.dir h2 .count { font: 500 13px var(--mono); color: var(--muted); margin-left: 10px; letter-spacing: 0 }
+.pill.featured { color: #c4b5fd; border-color: rgba(139,92,246,.55); background: rgba(139,92,246,.12) }
+.pill.pay { color: var(--ok); border-color: rgba(45,226,196,.35) }
+.card.is-featured { border-color: rgba(139,92,246,.45); box-shadow: 0 0 0 1px rgba(139,92,246,.2), 0 10px 34px rgba(139,92,246,.14) }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 26px; font: 500 13px var(--mono); color: var(--muted) }
+.plan span a { color: var(--accent-2) }
+.urlrow { display: flex; gap: 8px }
+.urlrow input { flex: 1; min-width: 0; font: inherit; font-weight: 400; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px }
+.note { margin: -6px 0 0; color: var(--accent-2); font-size: 13px }
+details.more { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(11,13,28,.5) }
+details.more summary { cursor: pointer; font-size: 13.5px; font-weight: 600 }
+details.more .inner { margin-top: 14px }
+.h { font-weight: 400; color: var(--muted); font-size: 12.5px }
+fieldset.paybox { display: grid; gap: 12px; margin: 0; padding: 14px 16px 16px; border: 1px solid rgba(45,226,196,.3); border-radius: 12px; background: rgba(45,226,196,.04) }
+fieldset.paybox legend { padding: 0 6px; font-weight: 600; font-size: 13.5px }
+fieldset.paybox p { margin: 0 }
+fieldset.paybox a { color: var(--accent-2) }
+.modes { display: flex; gap: 8px; flex-wrap: wrap }
+.modes label { display: inline-flex !important; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; font-weight: 500; cursor: pointer }
+.modes label.on { border-color: var(--ok); color: var(--ok) }
+.modes input { accent-color: var(--ok) }
+.paynote { margin-top: 12px }
+.foot-actions { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: space-between; margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px }
+.foot-actions a { color: var(--accent-2) }
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer }
+.btn.danger { color: #ff7b8a; border-color: rgba(255,123,138,.4) }
+@media (max-width: 860px) { .steps { grid-template-columns: 1fr } }

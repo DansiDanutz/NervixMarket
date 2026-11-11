@@ -6,8 +6,8 @@ import { Logo } from './logo'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'https://nervix.space'),
   title: 'Nervix Space · the AI Business Network',
-  description: 'The space where builders share AI ideas, app demos and production-ready apps, to be used or sold. The first 200 projects join for free.',
-  openGraph: { title: 'Nervix Space', description: 'Share your AI build: ideas, app demos, production-ready apps. The first 200 projects join free.', url: '/', siteName: 'Nervix Space' },
+  description: 'List your AI idea, app demo or production-ready app for free. Sell it or take subscriptions with NervixPay, wallet to wallet.',
+  openGraph: { title: 'Nervix Space', description: 'List your AI build for free: ideas, app demos, production-ready apps. Sell it with NervixPay.', url: '/', siteName: 'Nervix Space' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,8 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="brand"><Logo /> Nervix <b>Space</b></Link>
             <nav>
               <Link href="/#directory">Explore</Link>
-              <a href="https://nervixpay.live" target="_blank" rel="noreferrer">NervixPay</a>
-              <Link href="/list" className="btn">Join the space</Link>
+              <Link href="/sell">Sell with NervixPay</Link>
+              <Link href="/list" className="btn">List free</Link>
             </nav>
           </div>
         </header>
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="bot">
           <div className="wrap">
             <span><b className="foot-brand">Nervix Space</b> · nervix.space · part of the DansLab AI Business Network</span>
-            <span>Memberships paid with <a href="https://nervixpay.live">NervixPay</a>: wallet to wallet, verified on-chain, never custodied.</span>
+            <span>Payments by <a href="https://nervixpay.live">NervixPay</a>: wallet to wallet, verified on-chain, never custodied.</span>
           </div>
         </footer>
       </body>

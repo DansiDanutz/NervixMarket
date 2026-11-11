@@ -1,4 +1,4 @@
--- Nervix Market: run once in the Supabase SQL editor.
+-- Nervix Space: run once in the Supabase SQL editor, then run every file in supabase/migrations/ in order.
 -- Only the server (service-role key, in Vercel env) reads and writes these tables:
 -- RLS is on and there are no policies, so the anon key can see nothing.
 

@@ -1,84 +1,99 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
-import { CATEGORIES, OFFERS } from '@/lib/listing'
+import { FEATURE_USD } from '@/lib/listing'
+import { EMPTY, Field, ListingFields, type Errors, type Values } from './fields'
 
-type Errors = Record<string, string>
+type Done = { id: string; slug: string; page: string; manage: string; mailed: boolean }
 
-function Field({ name, label, hint, errors, children }: { name: string; label: string; hint?: string; errors: Errors; children: React.ReactNode }) {
-  return (
-    <label>
-      {label} {hint && <span className="h">{hint}</span>}
-      {children}
-      {errors[name] && <span className="err">{errors[name]}</span>}
-    </label>
-  )
-}
-
-/** Submit a listing. While free spots are left it is live at once; after that, on to the NervixPay checkout. */
-export function ListForm({ freeLeft, spots }: { freeLeft: number; spots: number }) {
-  const free = freeLeft > 0
+/** Quick listing: paste the link, we fill in what we can, pick a category, add your email. Free, live at once. */
+export function ListForm() {
+  const [v, setV] = useState<Values>(EMPTY)
   const [errors, setErrors] = useState<Errors>({})
   const [busy, setBusy] = useState(false)
+  const [filling, setFilling] = useState(false)
+  const [filled, setFilled] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
   const [fail, setFail] = useState<string | null>(null)
+  const [done, setDone] = useState<Done | null>(null)
+  const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }))
+
+  async function autofill() {
+    const url = v.website.trim()
+    if (!/^https:\/\/\S+\.\S+/.test(url) || url === filled) return
+    setFilling(true); setNote(null)
+    try {
+      const r = await fetch(`/api/prefill?url=${encodeURIComponent(url)}`)
+      const j = await r.json()
+      if (!r.ok) { setNote(`${j.error ?? 'Could not read that page.'} Fill in the fields below.`); return }
+      setFilled(url)
+      // only fill what the owner hasn't typed yet
+      setV((p) => ({ ...p, name: p.name || j.name, tagline: p.tagline || j.tagline, description: p.description || j.description, logo: p.logo || j.logo }))
+      setNote(j.name ? 'Filled in from your site. Check it, pick a category, and you are done.' : 'We could not find much on that page. Fill in the fields below.')
+    } catch { setNote('Could not read that page. Fill in the fields below.') } finally { setFilling(false) }
+  }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setBusy(true); setFail(null)
-    const body = Object.fromEntries(new FormData(e.currentTarget))
+    const body = { ...v, company: (new FormData(e.currentTarget).get('company') as string) ?? '' }
     try {
       const r = await fetch('/api/listings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json()
       if (r.status === 422) { setErrors(j.errors); return }
       if (!r.ok) throw new Error(j.error ?? `HTTP ${r.status}`)
-      setErrors({})
-      window.location.href = j.free ? j.page : j.pending
+      setErrors({}); setDone(j)
+      window.scrollTo({ top: 0 })
     } catch (err) { setFail((err as Error).message) } finally { setBusy(false) }
   }
-  const bad = (n: string) => (errors[n] ? 'bad' : undefined)
+
+  if (done) return <Welcome d={done} />
 
   return (
     <main className="wrap page">
-      <div className="eyebrow">Join Nervix Space</div>
-      <h1>Bring your project into the space</h1>
-      <p className="sub">{free
-        ? <>Tell people what you built: an idea, an app demo, or a production-ready app for sale. The first {spots} projects join for free, and <b>{freeLeft} free spots are left</b>. Your page goes live as soon as you submit.</>
-        : <>Tell people what you built: an idea, an app demo, or a production-ready app for sale. Your page goes live as soon as the 10 USD membership is paid in USDT or USDC through NervixPay.</>}</p>
+      <div className="eyebrow">Free for everyone</div>
+      <h1>List your project in 30 seconds</h1>
+      <p className="sub">Paste your link and we fill in the rest. An idea, an app demo or a production-ready app: listing is free, and your page goes live as soon as you submit. Want to sell it or charge a subscription? Add your NervixPay link.</p>
       <form className="f" onSubmit={submit} noValidate>
-        <Field name="name" label="Name" errors={errors}><input name="name" maxLength={60} className={bad('name')} required /></Field>
-        <Field name="tagline" label="One line" hint="what it does, in under 90 characters" errors={errors}><input name="tagline" maxLength={90} className={bad('tagline')} required /></Field>
-        <Field name="description" label="Description" hint="who it's for, what it does, what makes it good" errors={errors}><textarea name="description" maxLength={2000} className={bad('description')} required /></Field>
-        <div className="two">
-          <Field name="category" label="Category" errors={errors}>
-            <select name="category" defaultValue="" className={bad('category')} required>
-              <option value="" disabled>Choose…</option>
-              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
-          </Field>
-          <Field name="offer" label="People can…" errors={errors}>
-            <select name="offer" defaultValue="use" className={bad('offer')}>
-              {OFFERS.map((o) => <option key={o.id} value={o.id}>{o.id === 'use' ? 'Use it' : o.id === 'sell' ? 'Buy the business' : 'Use it or buy it'}</option>)}
-            </select>
-          </Field>
-        </div>
-        <div className="two">
-          <Field name="website" label="Website" hint="https://" errors={errors}><input name="website" type="url" placeholder="https://" className={bad('website')} required /></Field>
-          <Field name="price" label="Price" hint="optional: '$19/month', 'Free', 'Asking $25k'" errors={errors}><input name="price" maxLength={60} className={bad('price')} /></Field>
-        </div>
-        <div className="two">
-          <Field name="contact" label="Public contact" hint="email, Telegram or X handle" errors={errors}><input name="contact" maxLength={120} className={bad('contact')} required /></Field>
-          <Field name="logo" label="Logo link" hint="optional, https:// image" errors={errors}><input name="logo" type="url" className={bad('logo')} /></Field>
-        </div>
+        <Field name="website" label="Your project's link" hint="we read the name, description and logo from it" errors={errors}>
+          <div className="urlrow">
+            <input name="website" type="url" placeholder="https://" value={v.website} className={errors.website ? 'bad' : undefined}
+              onChange={(e) => set('website', e.target.value)} onBlur={autofill} required autoFocus />
+            <button type="button" className="btn ghost" onClick={autofill} disabled={filling}>{filling ? 'Reading…' : 'Autofill'}</button>
+          </div>
+        </Field>
+        {note && <p className="note">{note}</p>}
+        <ListingFields v={v} set={set} errors={errors} withEmail />
         <input name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
-        <Field name="owner_email" label="Your email" hint={free ? 'so we can reach you, never shown' : 'for the receipt, never shown'} errors={errors}><input name="owner_email" type="email" className={bad('owner_email')} required /></Field>
         <div className="payline">
-          {free
-            ? <div><b>Free · founding spot</b><small>One of the first {spots} projects in Nervix Space: free, for good. {freeLeft} spots left.</small></div>
-            : <div><b>10 USD a month</b><small>Paid in USDT or USDC with NervixPay, from your own wallet. Each payment keeps your page live for a month.</small></div>}
-          <button className="btn" disabled={busy}>{busy ? 'Saving…' : free ? 'Join for free →' : 'Continue to payment →'}</button>
+          <div><b>Free</b><small>Listing is free, for good. You get a private link to edit, pause or delete it.</small></div>
+          <button className="btn" disabled={busy}>{busy ? 'Publishing…' : 'Publish my listing →'}</button>
         </div>
         {fail && <span className="err">{fail}</span>}
       </form>
+    </main>
+  )
+}
+
+function Welcome({ d }: { d: Done }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <main className="wrap page">
+      <div className="eyebrow">You’re in the space</div>
+      <h1>Your project is live.</h1>
+      <div className="box">
+        <p><span className="status live">LIVE</span></p>
+        <p><b>Save your private manage link.</b> It is the only way to edit, pause or delete your listing{d.mailed ? ' (we also emailed it to you)' : ''}. Anyone with it can change your listing, so keep it to yourself.</p>
+        <div className="urlrow">
+          <input readOnly value={d.manage} onFocus={(e) => e.currentTarget.select()} aria-label="Your manage link" />
+          <button type="button" className="btn ghost" onClick={() => { navigator.clipboard?.writeText(d.manage).then(() => setCopied(true)) }}>{copied ? 'Copied' : 'Copy'}</button>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+          <Link className="btn" href={d.page}>See your page →</Link>
+          <Link className="btn ghost" href={`/feature/${d.id}`}>Feature it · {FEATURE_USD} USD</Link>
+        </div>
+      </div>
     </main>
   )
 }

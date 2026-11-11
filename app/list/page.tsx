@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { freeSpots } from '@/lib/listing'
-import { freeLeft } from '@/lib/store'
 import { ListForm } from './form'
 
-export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: 'Join Nervix Space', description: 'Bring your AI project into Nervix Space. The first 200 projects join for free.' }
+export const metadata: Metadata = {
+  title: 'List your project · Nervix Space',
+  description: 'List your AI project on Nervix Space for free in 30 seconds. Sell it or take subscriptions with NervixPay.',
+}
 
-export default async function ListPage() {
-  return <ListForm freeLeft={await freeLeft()} spots={freeSpots()} />
+export default function ListPage() {
+  return <ListForm />
 }

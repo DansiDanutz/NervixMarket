@@ -3,8 +3,8 @@ import type { Listing } from './listing'
 /** DansLab's own projects: the first members of the network. Facts come from the projects' own
  *  sites; nothing here claims numbers or a status that isn't public. */
 const base = {
-  status: 'active' as const, paid_until: null, owner_email: '', orders: [], founding: true,
-  created_at: '2026-11-01T00:00:00.000Z', logo: '', contact: '',
+  status: 'active' as const, owner_email: '', orders: [], founding: true, edit_token_hash: '', ip_hash: '',
+  created_at: '2026-11-01T00:00:00.000Z', logo: '', contact: '', pay_link: '', pay_mode: '' as const, featured_until: null,
 }
 
 export const FOUNDING: Listing[] = [
@@ -17,7 +17,7 @@ export const FOUNDING: Listing[] = [
   {
     ...base, id: 'founding-nervixpay', slug: 'nervixpay', name: 'NervixPay',
     tagline: 'Accept crypto payments as easily as a QR code.',
-    description: 'Non-custodial crypto checkout for merchants and AI agents. Customers pay from their own wallet straight to yours; every payment is verified on-chain and NervixPay never touches the funds. USDC and USDT on Polygon, Ethereum and BNB Chain, payment links, pay buttons, a REST API with signed webhooks, and expiring keys for agents. Nervix Space memberships are paid with it.',
+    description: 'Non-custodial crypto checkout for merchants and AI agents. Customers pay from their own wallet straight to yours; every payment is verified on-chain and NervixPay never touches the funds. USDC and USDT on Polygon, Ethereum and BNB Chain, payment links, pay buttons, a REST API with signed webhooks, and expiring keys for agents. Every seller in Nervix Space can take payments and subscriptions with it, and Featured spots are paid with it.',
     category: 'tools', offer: 'use', price: '0.2% per payment, capped at $2', website: 'https://nervixpay.live',
   },
   {

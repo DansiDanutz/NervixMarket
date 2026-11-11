@@ -1,11 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-/** NervixPay integration: the membership is one shared NervixPay payment link (10 USD, USDT/USDC).
- *  Each checkout carries the listing id as `ref`; NervixPay's signed `payment.paid` webhook returns
- *  it as `customerReference`, and that is what turns a listing on. Nothing here holds or moves funds:
- *  the payer's wallet pays Dan's wallet directly, NervixPay verifies it on-chain. */
+/** NervixPay integration for Nervix Space's own revenue: "Featured" is one shared NervixPay payment
+ *  link (10 USD, USDT/USDC). Each checkout carries the listing id as `ref`; NervixPay's signed
+ *  `payment.paid` webhook returns it as `customerReference`, and that is what features the listing.
+ *  Nothing here holds or moves funds: the payer's wallet pays Dan's wallet directly, NervixPay verifies
+ *  it on-chain. (Sellers' own sales go to their own NervixPay links, never through here.) */
 
-export const MEMBERSHIP_USD = 10
+import { FEATURE_USD } from './listing'
+export { FEATURE_USD }
 export const ACCEPTED_TOKENS = ['USDT', 'USDC'] as const
 const REPLAY_WINDOW_S = 5 * 60
 
@@ -13,7 +15,7 @@ export const config = () => ({
   base: (process.env.NERVIXPAY_BASE_URL || 'https://nervixpay.live').replace(/\/$/, ''),
   linkId: process.env.NERVIXPAY_LINK_ID || '',
   secret: process.env.NERVIXPAY_WEBHOOK_SECRET || '',
-  membershipDays: Number(process.env.MEMBERSHIP_DAYS || 30),
+  featureDays: Number(process.env.FEATURE_DAYS || process.env.MEMBERSHIP_DAYS || 30),
 })
 
 /** The hosted checkout for one listing. */
@@ -50,18 +52,18 @@ export interface PaidEvent {
   customerEmail: string | null
 }
 
-/** Is this payment a Nervix Space membership? Returns why not, or null when it counts. */
-export function membershipProblem(e: PaidEvent, c = config()): string | null {
+/** Is this payment a Featured spot? Returns why not, or null when it counts. */
+export function featureProblem(e: PaidEvent, c = config()): string | null {
   if (e.event !== 'payment.paid') return 'not a payment'
-  if (c.linkId && e.paymentLinkId !== c.linkId) return 'another payment link'
+  if (!c.linkId || e.paymentLinkId !== c.linkId) return 'another payment link'
   if (!ACCEPTED_TOKENS.includes(e.currencyToken as (typeof ACCEPTED_TOKENS)[number])) return `paid in ${e.currencyToken}`
   // NervixPay randomises the last decimals of the payable amount; anything below 9.99 is short.
-  if (!(Number(e.amountReceived) >= MEMBERSHIP_USD - 0.01)) return `amount ${e.amountReceived} is below ${MEMBERSHIP_USD}`
+  if (!(Number(e.amountReceived) >= FEATURE_USD - 0.01)) return `amount ${e.amountReceived} is below ${FEATURE_USD}`
   if (!e.customerReference) return 'no listing reference'
   return null
 }
 
-/** A paid membership extends from today, or from the current end date if it hasn't run out. */
+/** A paid Featured spot extends from today, or from the current end date if it hasn't run out. */
 export function extendUntil(current: string | null, days: number, now = Date.now()): string {
   const from = current && Date.parse(current) > now ? Date.parse(current) : now
   return new Date(from + days * 86_400_000).toISOString()
