@@ -3,7 +3,8 @@ import { FOUNDING } from '@/lib/founding'
 import { siteUrl } from '@/lib/owner'
 import { store } from '@/lib/store'
 
-export const revalidate = 3600
+/** Rendered on request: it reads the database with uncached queries (see app/l/[slug]/page.tsx). */
+export const dynamic = 'force-dynamic'
 
 /** Every live listing, so search engines find the projects people list for free. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
