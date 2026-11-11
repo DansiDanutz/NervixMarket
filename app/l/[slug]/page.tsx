@@ -6,10 +6,9 @@ import { siteUrl } from '@/lib/owner'
 import { findLive } from '@/lib/store'
 import { Report } from './report'
 
-/** Listing pages are cached and refreshed every minute, and right away when the owner edits. */
-export const revalidate = 60
-/** No pages at build time; each one is rendered on its first visit, then served from the cache. */
-export async function generateStaticParams() { return [] }
+/** Rendered on each request: the listing is read with an uncached (no-store) query, which Next.js does
+ *  not allow inside a cached (ISR) page. One indexed lookup by slug, so it stays fast. */
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const l = await findLive((await params).slug)
