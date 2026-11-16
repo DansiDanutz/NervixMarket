@@ -10,7 +10,7 @@ export default function NotFound() {
       <div className="eyebrow">404 · Lost in space</div>
       <h1>This page isn’t in the space</h1>
       <p className="sub">The link may be wrong, or the owner paused or removed this listing.</p>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div className="row-actions">
         <Link className="btn" href="/#directory">Explore the directory</Link>
         <Link className="btn ghost" href="/list">List your project free</Link>
       </div>

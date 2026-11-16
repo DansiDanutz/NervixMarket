@@ -4,7 +4,7 @@
   --bg: #04050d; --panel: #0b0d1c; --panel-2: #11142a; --line: rgba(190,200,255,.14); --line-strong: rgba(190,200,255,.26);
   --fg: #eef0fb; --muted: #a8aec8; --accent: #a78bfa; --accent-strong: #8b5cf6; --accent-ink: #0b0920; --accent-2: #22d3ee;
   --warn: #ffb547; --ok: #2de2c4; --danger: #ff8fa0;
-  --display: var(--font-display), ui-sans-serif, system-ui, sans-serif; --body: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --display: var(--font-display, ui-sans-serif), ui-sans-serif, system-ui, sans-serif; --body: var(--font-body, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --radius: 14px; --target: 44px; --wrap: 1120px;
   color-scheme: dark;
@@ -113,3 +113,5 @@ fieldset.paybox a { color: var(--accent-2) }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important }
 }
 #content:focus { outline: none }
+.row-actions { display: flex; gap: 10px; flex-wrap: wrap }
+.ref { margin-top: 18px }
