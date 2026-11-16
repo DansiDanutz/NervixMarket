@@ -13,6 +13,13 @@ describe('generated monogram (listing logo fallback)', () => {
     expect(Math.abs(a.hue - b.hue)).toBeGreaterThanOrEqual(20)
   })
 
+  it('never lands on the orange-yellow band, which darkens to brown for contrast', () => {
+    for (let i = 0; i < 500; i++) {
+      const { hue } = monogram(`listing-${i}`, 'Name')
+      expect(hue < 25 || hue >= 95).toBe(true)
+    }
+  })
+
   it('uses up to two initials from the name', () => {
     expect(monogram('x', 'Stream Studio').initials).toBe('SS')
     expect(monogram('x', 'zmarty').initials).toBe('ZM')

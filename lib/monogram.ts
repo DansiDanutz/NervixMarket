@@ -7,6 +7,11 @@ const TEXT = '#ffffff'
 const MIN_CONTRAST = 4.5
 const HUE_SHIFT = 38
 const START_LIGHTNESS = 30
+/** Oranges and yellows (25°–95°) have to be darkened so far for white text that they turn brown. */
+const MUDDY_FROM = 25
+const MUDDY_TO = 95
+const USABLE_HUES = 360 - (MUDDY_TO - MUDDY_FROM)
+const isMuddy = (hue: number) => hue >= MUDDY_FROM && hue < MUDDY_TO
 
 /** FNV-1a, 32-bit: small, fast and stable across runtimes. */
 function hash(s: string): number {
@@ -15,7 +20,8 @@ function hash(s: string): number {
     h ^= ch.codePointAt(0) ?? 0
     h = Math.imul(h, 0x01000193) >>> 0
   }
-  return h
+  // Finalizer: FNV's low bits barely change between similar slugs ("grokbot" / "grokbot-opkya").
+  return Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0
 }
 
 function initialsOf(name: string): string {
@@ -59,12 +65,13 @@ function readableStop(hue: number, saturation: number): string {
 }
 
 export function monogram(slug: string, name: string): Monogram {
-  const hue = hash(slug) % 360
+  const hue = (MUDDY_TO + (hash(slug) % USABLE_HUES)) % 360
+  const second = (hue + HUE_SHIFT) % 360
   return {
     initials: initialsOf(name),
     hue,
     from: readableStop(hue, 68),
-    to: readableStop((hue + HUE_SHIFT) % 360, 72),
+    to: readableStop(isMuddy(second) ? (hue - HUE_SHIFT + 360) % 360 : second, 72),
     text: TEXT,
   }
 }
