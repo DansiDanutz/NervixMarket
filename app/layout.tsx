@@ -1,42 +1,25 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import { Logo } from './logo'
+import { SiteFooter, SiteHeader } from './chrome'
+import { body, display } from './fonts'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'https://nervix.space'),
   title: 'Nervix Space · the AI Business Network',
   description: 'List your AI idea, app demo or production-ready app for free. Sell it or take subscriptions with NervixPay, wallet to wallet.',
-  openGraph: { title: 'Nervix Space', description: 'List your AI build for free: ideas, app demos, production-ready apps. Sell it with NervixPay.', url: '/', siteName: 'Nervix Space' },
+  openGraph: { siteName: 'Nervix Space', type: 'website', locale: 'en_US' },
+  twitter: { card: 'summary_large_image' },
 }
+
+export const viewport: Viewport = { themeColor: '#04050d', colorScheme: 'dark' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body>
-        <div className="sky" aria-hidden="true" />
-        <header className="top">
-          <div className="wrap">
-            <Link href="/" className="brand"><Logo /> Nervix <b>Space</b></Link>
-            <nav>
-              <Link href="/#directory">Explore</Link>
-              <Link href="/sell">Sell with NervixPay</Link>
-              <Link href="/list" className="btn">List free</Link>
-            </nav>
-          </div>
-        </header>
-        {children}
-        <footer className="bot">
-          <div className="wrap">
-            <span><b className="foot-brand">Nervix Space</b> · nervix.space · part of the DansLab AI Business Network</span>
-            <span>Payments by <a href="https://nervixpay.live">NervixPay</a>: wallet to wallet, verified on-chain, never custodied.</span>
-          </div>
-        </footer>
+        <SiteHeader />
+        <div id="content" tabIndex={-1}>{children}</div>
+        <SiteFooter />
       </body>
     </html>
   )

@@ -1,0 +1,85 @@
+/* Home: direction C (the product is the hero) in direction A's dark identity. Nothing here animates. */
+.hero { display: grid; grid-template-columns: 1.08fr .92fr; gap: 48px; align-items: center; padding-block: 56px 48px }
+.lead h1 { font: 700 clamp(36px, 5.4vw, 60px)/1.04 var(--display); letter-spacing: -.03em; margin: 22px 0 16px; max-width: 15ch; text-wrap: balance }
+.intro { font-size: 19px; color: var(--muted); margin: 0 0 28px; max-width: 52ch }
+.aside { color: var(--muted); margin: 0 }
+.aside a { color: var(--accent-2) }
+
+.modes { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-top: 18px; padding: 4px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line) }
+.modes a { display: inline-flex; align-items: center; min-height: var(--target); padding: 0 16px; border-radius: 10px; text-decoration: none; color: var(--muted); font-weight: 500 }
+.modes a:hover { color: var(--fg) }
+.modes a[aria-current] { background: var(--fg); color: var(--bg); font-weight: 600 }
+
+.find { display: flex; gap: 8px; max-width: 560px }
+.find input:not([type=hidden]) { flex: 1; min-width: 0; min-height: 54px; padding: 0 18px; font: inherit; font-size: 17px; color: var(--fg); background: var(--panel); border: 1.5px solid var(--line-strong); border-radius: 14px }
+.find input:focus { border-color: var(--accent) }
+.find button { min-height: 54px; padding: 0 22px; font: inherit; font-weight: 600; border: 0; border-radius: 14px; color: var(--accent-ink); background: linear-gradient(135deg, #c4b5fd, var(--accent)); cursor: pointer }
+
+/* The readout: A's instrument panel, with a static starfield painted once. */
+.readout { margin: 0; padding: 20px; border-radius: 20px; border: 1px solid var(--line-strong);
+  background:
+    radial-gradient(1px 1px at 14% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 72% 12%, #cfd6ff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 88% 64%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 36% 86%, #dfe4ff 50%, transparent 51%),
+    radial-gradient(420px 220px at 100% 0%, rgba(139,92,246,.22), transparent 70%), var(--panel) }
+.readout figcaption { font: 600 14px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px }
+.live { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; color: var(--ok) }
+.live::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor }
+.readout ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.readout li a { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 12px; text-decoration: none; background: rgba(4,5,13,.55); border: 1px solid var(--line) }
+.readout li a:hover { border-color: var(--line-strong) }
+.readout li span { display: grid; min-width: 0 }
+.readout li b { font-family: var(--display) }
+.readout li small { font-size: 15px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.more { display: inline-flex; align-items: center; min-height: var(--target); margin-top: 6px; color: var(--accent-2) }
+
+/* The paste demo (building mode) */
+.demo { display: grid; gap: 14px }
+.paste label { display: block; font-weight: 600; margin-bottom: 8px }
+.row { display: flex; gap: 8px }
+.row input { flex: 1; min-width: 0; min-height: 52px; padding: 0 16px; font: inherit; color: var(--fg); background: var(--panel); border: 1.5px solid var(--line-strong); border-radius: 14px }
+.row input:focus { border-color: var(--accent) }
+.row button { min-height: 52px; padding: 0 20px; font: inherit; font-weight: 600; border: 0; border-radius: 14px; background: var(--fg); color: var(--bg); cursor: pointer }
+.row button:disabled { opacity: .6; cursor: progress }
+.preview { padding: 20px; border-radius: 18px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line-strong) }
+.previewHead { display: flex; gap: 14px; align-items: center }
+.previewHead h2 { margin: 0; font: 700 21px var(--display) }
+.previewHead p { margin: 2px 0 0; color: var(--muted) }
+.previewFoot { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px }
+.free { color: var(--ok); font-weight: 600 }
+.status { margin: 0; color: var(--muted) }
+.err { margin: 0; color: var(--danger) }
+
+.dir { padding-block: 24px 40px }
+.dirHead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px }
+.dirHead h2 { font: 700 26px var(--display); letter-spacing: -.01em; margin: 0 }
+.count { font: 500 15px var(--mono); color: var(--muted) }
+
+.trust ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line-strong); border-radius: 20px; overflow: hidden; background: var(--panel) }
+.trust li { padding: 24px; display: grid; gap: 4px; align-content: start }
+.trust li + li { border-left: 1px solid var(--line) }
+.trust span { font: 600 14px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+.trust b { font: 700 32px/1.15 var(--display); letter-spacing: -.02em; color: var(--accent-2) }
+.trust p { margin: 0; color: var(--muted) }
+
+.how { padding-block: 64px 24px }
+.how h2, .final h2 { font: 700 clamp(26px, 3.6vw, 34px)/1.15 var(--display); letter-spacing: -.02em; margin: 0 0 20px }
+.how ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px }
+.how li { counter-increment: step; display: grid; gap: 6px; align-content: start; padding: 20px; border: 1px solid var(--line); border-radius: 16px }
+.how li::before { content: '0' counter(step); font: 600 14px var(--mono); color: var(--accent-2) }
+.how b { font: 700 19px var(--display) }
+.how span { color: var(--muted) }
+
+.final { margin-top: 48px; padding-block: 48px; text-align: center }
+.final p { color: var(--muted); font-size: 18px; margin: -8px 0 24px }
+.ctas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center }
+
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; gap: 28px; padding-block: 36px 24px }
+  .trust ul, .how ol { grid-template-columns: 1fr }
+  .trust li + li { border-left: 0; border-top: 1px solid var(--line) }
+}
+/* On phones the directory itself is the proof: skip the readout so it starts within the first screen. */
+@media (max-width: 720px) {
+  .proof:has(.readout) { display: none }
+  .find button { padding: 0 16px }
+}

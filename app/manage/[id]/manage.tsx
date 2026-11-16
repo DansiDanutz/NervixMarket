@@ -92,7 +92,7 @@ export function Manage({ id }: { id: string }) {
         <p><span className={`status ${live ? 'live' : ''}`}>{live ? 'LIVE' : st.status === 'paused' ? 'PAUSED' : 'UNDER REVIEW'}</span>
           {st.featured && st.featured_until && <span className="pill founding" style={{ marginLeft: 8 }}>Featured until {new Date(st.featured_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>}</p>
         {st.status === 'hidden' && <p>Your listing was reported by several people and is hidden until the team reviews it.</p>}
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="row-actions">
           {live && <Link className="btn ghost" href={`/l/${st.slug}`}>See your page</Link>}
           {st.status !== 'hidden' && <button className="btn ghost" onClick={toggle} disabled={busy}>{st.status === 'paused' ? 'Resume' : 'Pause'}</button>}
           <Link className="btn ghost" href={`/feature/${id}`}>{st.featured ? 'Extend Featured' : `Feature it · ${FEATURE_USD} USD`}</Link>

@@ -15,5 +15,5 @@ export function Poll({ id }: { id: string }) {
     }, 5000)
     return () => clearInterval(t)
   }, [id, router])
-  return <p className="h" style={{ color: 'var(--muted)', fontSize: 13 }}>This page updates by itself when the payment is confirmed.</p>
+  return <p className="h">This page updates by itself when the payment is confirmed.</p>
 }
