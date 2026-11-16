@@ -1,8 +1,8 @@
 # Checkpoint 2: three directions
 
-The mocks are real routes on this branch: `/lab` (index), `/lab/a`, `/lab/b`, `/lab/c` (`?for=build` shows the paste
-demo). The lab layout calls `notFound()` when `VERCEL_ENV === 'production'` and sets `noindex`, so it is visible
-on previews only. All three use the six live public listings and only the brief's claims. The one placeholder is
+The mocks were real routes on this branch (`/lab`, `/lab/a`, `/lab/b`, `/lab/c`; `?for=build` showed the paste
+demo), visible on previews only. They were removed once C with A's identity was picked; commit d56f465 has them.
+All three used the six live public listings and only the brief's claims. The one placeholder was
 in B: `[[PLACEHOLDER: testimonial, Dan to supply]]`.
 
 The screenshots are full-page Playwright captures (reduced motion on, light colour scheme) at 1440×900 and 390×844, in
@@ -74,4 +74,4 @@ then the home page built from C.
 - `app/logo.tsx` gained an optional `ring` colour so the mark is visible on light backgrounds. The current site uses
   the default, so it is unchanged.
 - In the labs, chip links and the search form don't filter. They are layout mocks only.
-- The lab routes should be deleted before this branch merges.
+- The lab routes were deleted in step 3.
