@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Sell with NervixPay · Nervix Space',
   description: 'Take crypto payments and subscriptions for your project, straight to your wallet, from your Nervix Space listing.',
   alternates: { canonical: '/sell' },
-  openGraph: { title: 'Sell with NervixPay', description: 'A Buy or Subscribe button on your listing. USDT or USDC, wallet to wallet. 0.2% capped at $2.', url: '/sell' },
+  openGraph: { title: 'Sell with NervixPay', description: 'A Buy or Subscribe button on your listing. USDT or USDC, wallet to wallet. 0.2% capped at $2.', url: '/sell', siteName: 'Nervix Space' },
 }
 
 const EXAMPLE_PRICE = 49

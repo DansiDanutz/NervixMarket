@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${l.name} · Nervix Space`, description: l.tagline,
     alternates: { canonical: `/l/${l.slug}` },
-    openGraph: { title: l.name, description: l.tagline, url: `/l/${l.slug}`, siteName: 'Nervix Space', ...(l.logo ? { images: [l.logo] } : {}) },
-    twitter: { card: 'summary', title: l.name, description: l.tagline },
+    openGraph: { title: `${l.name} · Nervix Space`, description: l.tagline, url: `/l/${l.slug}`, siteName: 'Nervix Space' },
+    twitter: { card: 'summary_large_image', title: l.name, description: l.tagline },
   }
 }
 

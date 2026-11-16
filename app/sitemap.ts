@@ -3,7 +3,10 @@ import { FOUNDING } from '@/lib/founding'
 import { siteUrl } from '@/lib/owner'
 import { store } from '@/lib/store'
 
-export const revalidate = 3600
+/** Rendered per request: the store reads Supabase with `cache: 'no-store'`, which a static render cannot do.
+ *  As a static route the fetch threw at build time and on every revalidation, the error was caught, and the
+ *  sitemap only ever listed the founding projects. */
+export const dynamic = 'force-dynamic'
 
 /** Every live listing, so search engines find the projects people list for free. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

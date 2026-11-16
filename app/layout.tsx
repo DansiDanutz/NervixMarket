@@ -7,7 +7,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'https://nervix.space'),
   title: 'Nervix Space · the AI Business Network',
   description: 'List your AI idea, app demo or production-ready app for free. Sell it or take subscriptions with NervixPay, wallet to wallet.',
-  openGraph: { title: 'Nervix Space', description: 'List your AI build for free: ideas, app demos, production-ready apps. Sell it with NervixPay.', url: '/', siteName: 'Nervix Space' },
+  openGraph: { siteName: 'Nervix Space', type: 'website', locale: 'en_US' },
+  twitter: { card: 'summary_large_image' },
 }
 
 export const viewport: Viewport = { themeColor: '#04050d', colorScheme: 'dark' }

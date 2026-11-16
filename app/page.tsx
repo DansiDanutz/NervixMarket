@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { Avatar } from '@/components/avatar'
@@ -10,6 +11,13 @@ import { RememberMode } from './home/remember-mode'
 import s from './home/home.module.css'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Nervix Space · the AI Business Network',
+  description: 'List your AI idea, app demo or production-ready app for free in about 30 seconds. Sell it or take subscriptions with NervixPay, wallet to wallet.',
+  alternates: { canonical: '/' },
+  openGraph: { title: 'Nervix Space · the AI Business Network', description: 'List your AI build for free: ideas, app demos, production-ready apps. Sell it with NervixPay.', url: '/', siteName: 'Nervix Space' },
+}
 
 type Params = { for?: string; q?: string; category?: string; offer?: string; page?: string }
 type View = { mode: Mode; q?: string; category?: string; offer?: string }
