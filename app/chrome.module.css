@@ -1,0 +1,32 @@
+/* Site header and footer. Solid surfaces (no backdrop-filter), not sticky, nothing animated. */
+.skip { position: absolute; left: 12px; top: -80px; z-index: 100; padding: 12px 16px; border-radius: 10px; background: #fff; color: #000; font-weight: 600; text-decoration: none }
+.skip:focus { top: 12px }
+
+.top { border-bottom: 1px solid var(--line); background: rgba(4,5,13,.92) }
+.bar { display: flex; align-items: center; gap: 16px; min-height: 64px }
+.brand { display: inline-flex; align-items: center; gap: 10px; min-height: var(--target); text-decoration: none; font: 700 19px var(--display); letter-spacing: -.01em }
+.brand span { font-weight: 500; color: var(--muted) }
+.nav { margin-left: auto; display: flex; gap: 4px; align-items: center }
+.nav a { display: inline-flex; align-items: center; min-height: var(--target); padding: 0 12px; border-radius: 10px; text-decoration: none; color: var(--muted) }
+.nav a:hover, .nav a[aria-current] { color: var(--fg) }
+.nav a.cta { margin-left: 6px; padding: 0 16px; color: var(--accent-ink); font-weight: 600; background: linear-gradient(135deg, #c4b5fd, var(--accent)) }
+
+/* Under 720px the links fold into a <details> menu: works without JavaScript. */
+.menu { display: none; margin-left: auto; position: relative }
+.menu summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; min-height: var(--target); padding: 0 16px; border: 1px solid var(--line-strong); border-radius: 12px; font-weight: 600; cursor: pointer }
+.menu summary::-webkit-details-marker { display: none }
+.menu summary::after { content: ''; width: 8px; height: 8px; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg) }
+.menu[open] summary::after { transform: translateY(2px) rotate(-135deg) }
+.menu nav { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; display: grid; min-width: 232px; padding: 6px; background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 24px 48px -20px #000 }
+.menu nav a { display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 10px; text-decoration: none }
+.menu nav a:hover { background: rgba(255,255,255,.05) }
+@media (max-width: 720px) { .nav { display: none } .menu { display: block } }
+
+.bot { margin-top: 40px; border-top: 1px solid var(--line); padding: 32px 0 44px; color: var(--muted); font-size: 15px }
+.cols { display: flex; flex-wrap: wrap; gap: 20px 40px; justify-content: space-between }
+.cols p { margin: 6px 0 0; max-width: 46ch }
+.cols b { color: var(--fg); font-family: var(--display) }
+.links { display: flex; flex-wrap: wrap; gap: 0 4px; align-items: flex-start; margin: 0; padding: 0; list-style: none }
+.links a { display: inline-flex; align-items: center; min-height: var(--target); padding: 0 10px; text-decoration: none }
+.links a:hover { color: var(--fg) }
+.pay a { color: var(--accent-2) }

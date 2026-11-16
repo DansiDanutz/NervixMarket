@@ -1,8 +1,7 @@
-/* The lab mocks bring their own chrome: hide the current site's sky, header and footer around them. */
+/* The lab mocks bring their own chrome: hide the site header and footer around them. */
 body:has(.lab-root) { background: #04050d }
-body:has(.lab-root) > .sky,
-body:has(.lab-root) > header.top,
-body:has(.lab-root) > footer.bot { display: none }
+body:has(.lab-root) > header,
+body:has(.lab-root) > footer { display: none }
 .lab-root { min-height: 100vh }
 .lab-root *, .lab-root *::before, .lab-root *::after { box-sizing: border-box }
 .lab-skip { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 10px 14px; border-radius: 8px; background: #fff; color: #000; font: 600 16px system-ui }
