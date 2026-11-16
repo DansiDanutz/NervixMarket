@@ -6,10 +6,10 @@ import { siteUrl } from '@/lib/owner'
 import { findLive } from '@/lib/store'
 import { Report } from './report'
 
-/** Listing pages are cached and refreshed every minute, and right away when the owner edits. */
-export const revalidate = 60
-/** No pages at build time; each one is rendered on its first visit, then served from the cache. */
-export async function generateStaticParams() { return [] }
+/** Rendered per request. The store reads Supabase with `cache: 'no-store'`, which a static (ISR) render
+ *  cannot do: Next threw "Page changed from static to dynamic at runtime" and every database listing
+ *  returned 500. Caching can come back once the store accepts fetch cache options. */
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const l = await findLive((await params).slug)
