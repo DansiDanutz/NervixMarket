@@ -1,0 +1,8 @@
+.stepper { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; padding: 0 }
+.stepper li { display: inline-flex; align-items: center; gap: 10px; min-height: var(--target); padding: 0 16px 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted) }
+.stepper li > span[aria-hidden] { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font: 600 14px var(--mono); background: var(--panel-2) }
+.stepper li[data-state=now] { color: var(--fg); border-color: var(--accent) }
+.stepper li[data-state=now] > span[aria-hidden] { background: var(--accent); color: var(--accent-ink) }
+.stepper li[data-state=done] { color: var(--fg) }
+.stepper li[data-state=done] > span[aria-hidden] { background: rgba(45,226,196,.16); color: var(--ok) }
+.welcomeActions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px }
