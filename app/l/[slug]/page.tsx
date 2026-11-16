@@ -4,7 +4,9 @@ import { notFound } from 'next/navigation'
 import { CATEGORIES, OFFERS, PAY_MODES, isFeatured } from '@/lib/listing'
 import { siteUrl } from '@/lib/owner'
 import { findLive } from '@/lib/store'
+import { Avatar } from '@/components/avatar'
 import { Report } from './report'
+import s from './listing.module.css'
 
 /** Rendered per request. The store reads Supabase with `cache: 'no-store'`, which a static (ISR) render
  *  cannot do: Next threw "Page changed from static to dynamic at runtime" and every database listing
@@ -35,36 +37,43 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
     url: l.website, applicationCategory: CATEGORIES.find((c) => c.id === l.category)?.label, ...(l.logo ? { image: l.logo } : {}),
     mainEntityOfPage: `${siteUrl()}/l/${l.slug}`,
   }
+  const host = l.website.replace(/^https:\/\//, '').replace(/\/$/, '')
   return (
-    <main className="wrap page detail">
+    <main className={`wrap ${s.page}`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, '\\u003c') }} />
-      <Link href="/#directory" className="eyebrow" style={{ textDecoration: 'none' }}>← Directory</Link>
-      <div className="head" style={{ marginTop: 16 }}>
-        <div className="logo">{l.logo ? <img src={l.logo} alt="" referrerPolicy="no-referrer" loading="lazy" /> : l.name.slice(0, 1)}</div>
+      <Link href="/#directory" className={s.back}>Back to the directory</Link>
+      <header className={s.head}>
+        <Avatar slug={l.slug} name={l.name} logo={l.logo || undefined} size={72} radius={18} />
         <div>
-          <h1 style={{ margin: 0 }}>{l.name}</h1>
-          <p className="sub" style={{ margin: 0 }}>{l.tagline}</p>
+          <h1>{l.name}</h1>
+          <p className={s.tagline}>{l.tagline}</p>
         </div>
-      </div>
-      <div className="meta" style={{ marginBottom: 18 }}>
+      </header>
+      <div className="meta">
         {l.founding && <span className="pill founding">Founding member</span>}
         {isFeatured(l) && <span className="pill featured">Featured</span>}
         <span className="pill">{CATEGORIES.find((c) => c.id === l.category)?.label}</span>
         <span className={`pill ${l.offer !== 'use' ? 'sell' : ''}`}>{OFFERS.find((o) => o.id === l.offer)?.label}</span>
         {mode && <span className="pill pay">{mode.id === 'subscribe' ? 'Subscription' : 'Buy now'} · NervixPay</span>}
       </div>
-      {l.description && <p className="desc">{l.description}</p>}
-      <dl className="facts">
-        {l.price && <><dt>Price</dt><dd>{l.price}</dd></>}
-        <dt>Website</dt><dd><a href={l.website} target="_blank" rel="noopener noreferrer nofollow ugc">{l.website.replace(/^https:\/\//, '')}</a></dd>
-        {l.contact && <><dt>Contact</dt><dd>{contact ? <a href={contact} rel="nofollow ugc noopener noreferrer">{l.contact}</a> : l.contact}</dd></>}
-      </dl>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        {mode && <a className="btn" href={l.pay_link} target="_blank" rel="noopener noreferrer nofollow">{mode.button}{l.price ? ` · ${l.price}` : ''} →</a>}
-        <a className={`btn ${mode ? 'ghost' : ''}`} href={l.website} target="_blank" rel="noopener noreferrer nofollow ugc">Visit {l.name} →</a>
-        <Link className="btn ghost" href="/list">List yours free</Link>
+
+      <div className={s.body}>
+        <div>
+          {l.description && <p className={s.desc}>{l.description}</p>}
+          <dl className="facts">
+            {l.price && <><dt>Price</dt><dd>{l.price}</dd></>}
+            <dt>Website</dt><dd><a href={l.website} target="_blank" rel="noopener noreferrer nofollow ugc">{host}</a></dd>
+            {l.contact && <><dt>Contact</dt><dd>{contact ? <a href={contact} rel="nofollow ugc noopener noreferrer">{l.contact}</a> : l.contact}</dd></>}
+          </dl>
+        </div>
+        <aside className={s.actions} aria-label="Actions">
+          {mode && <a className="btn" href={l.pay_link} target="_blank" rel="noopener noreferrer nofollow">{mode.button}{l.price ? ` · ${l.price}` : ''}</a>}
+          <a className={`btn ${mode ? 'ghost' : ''}`} href={l.website} target="_blank" rel="noopener noreferrer nofollow ugc">Visit {l.name}</a>
+          {mode && <p className={s.paynote}>Paid wallet to wallet in USDT or USDC, straight to the owner, verified on-chain by NervixPay. Nervix Space never holds the money; check the project before you pay.</p>}
+          <Link className={s.listYours} href="/list">List yours free</Link>
+        </aside>
       </div>
-      {mode && <p className="h paynote">Paid wallet to wallet in USDT or USDC, straight to the owner, verified on-chain by NervixPay. Nervix Space never holds the money; check the project before you pay.</p>}
+
       {!l.founding && (
         <div className="foot-actions">
           {!mode && <span>Own this project? <Link href="/sell">Start taking payments with NervixPay</Link>.</span>}
