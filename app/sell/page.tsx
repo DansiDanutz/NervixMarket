@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { feeFor, formatUsd } from '@/lib/fees'
 import { FeeCalculator } from './fee-calculator'
 import s from './sell.module.css'
 
@@ -11,16 +12,11 @@ export const metadata: Metadata = {
 }
 
 const EXAMPLE_PRICE = 49
-const MAX_PRICE = 1_000_000
-
-function priceFrom(raw?: string): number {
-  const n = Number(raw)
-  return Number.isFinite(n) && n > 0 && n <= MAX_PRICE ? n : EXAMPLE_PRICE
-}
+/** Rendered on the server, so the fee is clear even without JavaScript. */
+const EXAMPLES = [10, 500, 5_000]
 
 /** How a project owner starts taking payments: their own NervixPay link, pasted into their listing. */
-export default async function Sell({ searchParams }: { searchParams: Promise<{ price?: string }> }) {
-  const { price } = await searchParams
+export default function Sell() {
   return (
     <main className={`wrap ${s.page}`}>
       <header className={s.head}>
@@ -38,7 +34,15 @@ export default async function Sell({ searchParams }: { searchParams: Promise<{ p
           <li><b>Create a payment link</b><span>Set the price and the tokens (USDT, USDC) and networks you accept. Copy the link: nervixpay.live/l/…</span></li>
           <li><b>Paste it in your listing</b><span>On the listing form, or from your private manage link. Choose “One-time purchase” or “Subscription”.</span></li>
         </ol>
-        <div id="fees"><FeeCalculator initial={priceFrom(price)} /></div>
+        <div id="fees">
+          <FeeCalculator initial={EXAMPLE_PRICE} />
+          <p className={s.examples}>
+            For example: {EXAMPLES.map((p, i) => {
+              const r = feeFor(p)
+              return r && <span key={p}>{i > 0 && ' · '}{formatUsd(p)} sale, {formatUsd(r.fee)} fee{r.capped ? ' (capped)' : ''}</span>
+            })}
+          </p>
+        </div>
       </div>
 
       <section className={s.notes} aria-label="Details">

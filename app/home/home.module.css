@@ -42,7 +42,7 @@
 .row button:disabled { opacity: .6; cursor: progress }
 .preview { padding: 20px; border-radius: 18px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line-strong) }
 .previewHead { display: flex; gap: 14px; align-items: center }
-.previewHead h3 { margin: 0; font: 700 21px var(--display) }
+.previewHead h2 { margin: 0; font: 700 21px var(--display) }
 .previewHead p { margin: 2px 0 0; color: var(--muted) }
 .previewFoot { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px }
 .free { color: var(--ok); font-weight: 600 }

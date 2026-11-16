@@ -6,19 +6,18 @@ import s from './sell.module.css'
 
 const MAX_PRICE = 1_000_000
 
-/** Live with JavaScript; without it, the GET form posts back to /sell?price= and the server renders the result. */
+/** Live fee breakdown. Server-rendered at the example price; the page also lists fixed examples for no-JS visitors. */
 export function FeeCalculator({ initial }: { initial: number }) {
   const [text, setText] = useState(String(initial))
   const r = feeFor(Number(text))
   return (
-    <form className={s.calc} action="/sell#fees" aria-labelledby="fees-title">
+    <form className={s.calc} aria-labelledby="fees-title" onSubmit={(e) => e.preventDefault()}>
       <h2 id="fees-title">What you keep</h2>
       <label htmlFor="price">Price of one payment, in USD</label>
       <div className={s.calcRow}>
         <span aria-hidden="true">$</span>
         <input id="price" name="price" type="number" inputMode="decimal" min="0.01" max={MAX_PRICE} step="0.01"
           value={text} onChange={(e) => setText(e.target.value)} aria-describedby="fee-result" />
-        <noscript><button className="btn ghost" type="submit">Calculate</button></noscript>
       </div>
       <output id="fee-result" htmlFor="price" className={s.result} aria-live="polite">
         {r ? (

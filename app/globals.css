@@ -115,3 +115,4 @@ fieldset.paybox a { color: var(--accent-2) }
 #content:focus { outline: none }
 .row-actions { display: flex; gap: 10px; flex-wrap: wrap }
 .ref { margin-top: 18px }
+.facts dd a, .foot-actions a { display: inline-flex; align-items: center; min-height: var(--target) }

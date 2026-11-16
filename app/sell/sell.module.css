@@ -33,3 +33,4 @@
 .ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px }
 
 @media (max-width: 860px) { .grid, .notes { grid-template-columns: 1fr } }
+.examples { margin: 12px 4px 0; font-size: 15px; color: var(--muted) }

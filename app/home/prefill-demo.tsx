@@ -52,7 +52,7 @@ export function PrefillDemo() {
       <article className={s.preview} aria-live="polite" aria-busy={state === 'loading'}>
         <div className={s.previewHead}>
           <Avatar slug={slugify(card.name)} name={card.name} logo={card.logo || undefined} size={56} radius={14} />
-          <div><h3>{card.name}</h3><p>{card.tagline}</p></div>
+          <div><h2>{card.name}</h2><p>{card.tagline}</p></div>
         </div>
         <div className={s.previewFoot}><span>{hostOf(card.website)}</span><span className={s.free}>Listed free</span></div>
       </article>
