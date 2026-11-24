@@ -1,5 +1,7 @@
 name: Verify Nervix Market
 on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -10,6 +12,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm test
       - run: npm run build
-      - run: npm run lint
+      - run: npm run smoke
+      - run: npm audit --omit=dev --audit-level=high

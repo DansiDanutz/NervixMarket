@@ -1,5 +1,5 @@
 /** The Nervix Space mark: a planet with its orbit and a moon. */
-export function Logo({ size = 28 }: { size?: number }) {
+export function Logo({ size = 28, ring = '#e8e6ff' }: { size?: number; ring?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <defs>
@@ -9,8 +9,8 @@ export function Logo({ size = 28 }: { size?: number }) {
         </linearGradient>
       </defs>
       <circle cx="16" cy="16" r="8.5" fill="url(#ns-p)" />
-      <ellipse cx="16" cy="16" rx="14.5" ry="5.2" fill="none" stroke="#e8e6ff" strokeOpacity=".85" strokeWidth="1.6" transform="rotate(-24 16 16)" />
-      <circle cx="28.4" cy="10.6" r="2.1" fill="#fff" />
+      <ellipse cx="16" cy="16" rx="14.5" ry="5.2" fill="none" stroke={ring} strokeOpacity=".85" strokeWidth="1.6" transform="rotate(-24 16 16)" />
+      <circle cx="28.4" cy="10.6" r="2.1" fill={ring} />
     </svg>
   )
 }

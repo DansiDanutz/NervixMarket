@@ -2,16 +2,17 @@
   "name": "nervix-market",
   "private": true,
   "version": "0.1.0",
-  "description": "Nervix Space: the space where builders share AI ideas, app demos and production-ready apps. First 200 projects free, then 10 USD in USDT/USDC via NervixPay.",
+  "description": "Nervix Space, the AI Business Network from DansLab: list an AI idea, app demo or production-ready app for free, and sell it with NervixPay.",
   "scripts": {
     "dev": "next dev -p 3300",
     "build": "next build",
     "start": "next start -p 3300",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
-    "next": "15.5.28",
+    "next": "^16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
@@ -20,6 +21,6 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.4"
+    "vitest": "^5.1.1"
   }
 }

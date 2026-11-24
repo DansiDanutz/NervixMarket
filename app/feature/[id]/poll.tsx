@@ -1,19 +1,65 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-/** Re-checks every 5 s; reloads the page once the listing is featured. */
-export function Poll({ id }: { id: string }) {
+const POLL_INTERVAL_MS = 5_000
+const MAX_CHECKS = 180 // 15 minutes of active-tab polling
+
+/** Re-checks every 5 s while visible (up to 15 min); reloads the page once the Featured date changes. */
+export function Poll({ id, currentUntil }: { id: string; currentUntil: string | null }) {
   const router = useRouter()
+  const [stopped, setStopped] = useState(false)
+  const [checking, setChecking] = useState(false)
+
+  const checkOnce = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/listings/${id}`, { cache: 'no-store' })
+      if (!r.ok) return false
+      const j = await r.json().catch(() => null)
+      if (!j) return false
+      const changed = currentUntil ? j.featured_until !== currentUntil : Boolean(j.featured)
+      if (changed) {
+        router.refresh()
+        return true
+      }
+    } catch { /* offline: try again */ }
+    return false
+  }, [currentUntil, id, router])
+
   useEffect(() => {
+    let checks = 0
     const t = setInterval(async () => {
-      try {
-        const r = await fetch(`/api/listings/${id}`, { cache: 'no-store' })
-        if (r.ok && (await r.json()).featured) { clearInterval(t); router.refresh() }
-      } catch { /* offline: try again */ }
-    }, 5000)
+      if (document.hidden) return
+      checks += 1
+      const done = await checkOnce()
+      if (done) {
+        clearInterval(t)
+        return
+      }
+      if (checks >= MAX_CHECKS) {
+        clearInterval(t)
+        setStopped(true)
+      }
+    }, POLL_INTERVAL_MS)
     return () => clearInterval(t)
-  }, [id, router])
-  return <p className="h" style={{ color: 'var(--muted)', fontSize: 13 }}>This page updates by itself when the payment is confirmed.</p>
+  }, [checkOnce])
+
+  async function manualCheck() {
+    setChecking(true)
+    await checkOnce()
+    setChecking(false)
+  }
+
+  if (stopped) {
+    return (
+      <p className="h poll-note" role="status">
+        Auto-check paused after 15 minutes.{' '}
+        <button type="button" className="linkish" disabled={checking} onClick={manualCheck}>
+          {checking ? 'Checking…' : 'Check payment status now'}
+        </button>
+      </p>
+    )
+  }
+  return <p className="h poll-note">This page updates by itself when the payment is confirmed.</p>
 }

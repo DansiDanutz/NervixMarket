@@ -33,19 +33,25 @@ Network: anyone can list an idea, an app demo, or a production-ready app, **for 
 3. **Vercel**: the variables in `.env.example`. Optional: `RESEND_API_KEY` + `MAIL_FROM` (mailing manage links),
    `ADMIN_TOKEN` (moderation).
 
-## API (agents can use it)
+## API & MCP (AI agents can use it)
+- `POST /api/mcp` (`GET /api/mcp` for metadata) — Hosted Streamable HTTP MCP server (JSON-RPC 2.0, zero install): `search_listings`, `get_listing`, `list_categories`, `preview_url`, `submit_listing`, plus `nervix://directory` & `nervix://guide` resources. Human docs & copy-paste configs at `/agents`.
+- `GET /llms.txt` — machine-readable LLM/agent discovery manifest
+- `GET /feed.xml` — auto-updating RSS 2.0 feed of live listings
+- `GET /api/badge/:slug` — embeddable SVG badge (`Listed`, `Featured`, or `Founding` on Nervix Space)
+- `GET /api/health` — readiness & database reachability check (200 ok / 503 degraded)
 - `GET /api/listings?q=&category=&offer=&page=` — live listings, 36 a page, featured first (never private fields)
 - `POST /api/listings` — submit; returns `{ id, slug, page, manage, mailed }`
 - `GET /api/listings/:id` — public state; with `x-manage-token`, also the owner's view
 - `PATCH /api/listings/:id` / `DELETE /api/listings/:id` — owner edits, `status: active|paused`, delete (`x-manage-token`)
 - `POST /api/listings/:id/report` — flag a listing
-- `GET /api/prefill?url=` — suggested fields from a public https page
+- `GET /api/prefill?url=` — suggested fields from a public https page (rate-limited, SSRF-hardened)
 - `PATCH /api/admin/listings/:id` — `{ status: active|hidden|removed }` with `Authorization: Bearer $ADMIN_TOKEN`
 
 ## Develop
 ```bash
 npm install
 npm run dev     # http://localhost:3300
-npm test        # validation, pay links, prefill safety, manage tokens, moderation, Featured payments
+npm test        # validation, pay links, prefill safety, MCP, badges, feeds, manage tokens, moderation, Featured payments
 npm run build
+npm run smoke   # production-server E2E smoke test (runs in CI)
 ```

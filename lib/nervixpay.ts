@@ -11,11 +11,16 @@ export { FEATURE_USD }
 export const ACCEPTED_TOKENS = ['USDT', 'USDC'] as const
 const REPLAY_WINDOW_S = 5 * 60
 
+const parseFeatureDays = () => {
+  const n = Number(process.env.FEATURE_DAYS || process.env.MEMBERSHIP_DAYS || 30)
+  return Number.isInteger(n) && n >= 1 && n <= 3660 ? n : 30
+}
+
 export const config = () => ({
   base: (process.env.NERVIXPAY_BASE_URL || 'https://nervixpay.live').replace(/\/$/, ''),
   linkId: process.env.NERVIXPAY_LINK_ID || '',
   secret: process.env.NERVIXPAY_WEBHOOK_SECRET || '',
-  featureDays: Number(process.env.FEATURE_DAYS || process.env.MEMBERSHIP_DAYS || 30),
+  featureDays: parseFeatureDays(),
 })
 
 /** The hosted checkout for one listing. */
@@ -55,11 +60,12 @@ export interface PaidEvent {
 /** Is this payment a Featured spot? Returns why not, or null when it counts. */
 export function featureProblem(e: PaidEvent, c = config()): string | null {
   if (e.event !== 'payment.paid') return 'not a payment'
+  if (typeof e.orderId !== 'string' || !e.orderId.trim()) return 'missing order id'
   if (!c.linkId || e.paymentLinkId !== c.linkId) return 'another payment link'
   if (!ACCEPTED_TOKENS.includes(e.currencyToken as (typeof ACCEPTED_TOKENS)[number])) return `paid in ${e.currencyToken}`
   // NervixPay randomises the last decimals of the payable amount; anything below 9.99 is short.
   if (!(Number(e.amountReceived) >= FEATURE_USD - 0.01)) return `amount ${e.amountReceived} is below ${FEATURE_USD}`
-  if (!e.customerReference) return 'no listing reference'
+  if (typeof e.customerReference !== 'string' || !e.customerReference.trim()) return 'no listing reference'
   return null
 }
 

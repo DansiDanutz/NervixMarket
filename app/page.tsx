@@ -1,113 +1,205 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CATEGORIES, FEATURE_USD, OFFERS, isFeatured, type PublicListing } from '@/lib/listing'
+import { cookies } from 'next/headers'
+import { Avatar } from '@/components/avatar'
+import { ListingCard } from '@/components/listing-card'
+import { CATEGORIES, FEATURE_USD, type PublicListing } from '@/lib/listing'
+import { ANY_OFFER, MODE_COOKIE, homeCopy, modeHref, resolveMode, resolveOffer, type Mode } from '@/lib/mode'
 import { browse } from '@/lib/store'
-import { Logo } from './logo'
+import { PrefillDemo } from './home/prefill-demo'
+import { RememberMode } from './home/remember-mode'
+import s from './home/home.module.css'
 
 export const dynamic = 'force-dynamic'
 
-type P = { q?: string; category?: string; offer?: string; page?: string }
-
-const href = (p: P) => {
-  const u = new URLSearchParams(Object.entries(p).filter(([, v]) => v) as [string, string][])
-  const s = u.toString()
-  return `/${s ? `?${s}` : ''}#directory`
+export const metadata: Metadata = {
+  title: 'Nervix Space · the AI Business Network',
+  description: 'List your AI idea, app demo or production-ready app for free in about 30 seconds. Sell it or take subscriptions with NervixPay, wallet to wallet.',
+  alternates: { canonical: '/' },
+  openGraph: { title: 'Nervix Space · the AI Business Network', description: 'List your AI build for free: ideas, app demos, production-ready apps. Sell it with NervixPay.', url: '/', siteName: 'Nervix Space' },
 }
 
-function ListingCard({ l }: { l: PublicListing }) {
-  const cat = CATEGORIES.find((c) => c.id === l.category)?.label
+type Params = { for?: string; q?: string; category?: string; offer?: string; page?: string }
+type View = { mode: Mode; q?: string; category?: string; offer?: string }
+
+const MAX_QUERY = 100
+const READOUT_SIZE = 3
+
+/** Directory link that keeps the visitor's mode and filters. */
+function dirHref(v: View, change: Partial<Omit<View, 'mode'>> & { page?: number }): string {
+  const next = { q: v.q, category: v.category, offer: v.offer, ...change }
+  const params = new URLSearchParams({ for: v.mode })
+  for (const [k, val] of Object.entries(next)) if (val !== undefined && val !== '' && !(k === 'page' && val === 1)) params.set(k, String(val))
+  return `/?${params.toString()}#directory`
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<Params> }) {
+  const p = await searchParams
+  const jar = await cookies()
+  const mode = resolveMode(p.for, jar.get(MODE_COOKIE)?.value)
+  const offer = resolveOffer(mode, p.offer)
+  const view: View = { mode, q: p.q?.slice(0, MAX_QUERY) || undefined, category: p.category, offer: p.offer }
+  const r = await browse({ q: view.q, category: view.category, offer }, Number(p.page ?? 1))
+  const copy = homeCopy(mode)
+
   return (
-    <Link href={`/l/${l.slug}`} className={`card ${isFeatured(l) ? 'is-featured' : ''}`}>
-      <div className="head">
-        <div className="logo">{l.logo ? <img src={l.logo} alt="" referrerPolicy="no-referrer" loading="lazy" /> : l.name.slice(0, 1)}</div>
-        <div><h3>{l.name}</h3></div>
-      </div>
-      <p className="tag">{l.tagline}</p>
-      <div className="meta">
-        {l.founding && <span className="pill founding">Founding member</span>}
-        {isFeatured(l) && <span className="pill featured">Featured</span>}
-        <span className="pill">{cat}</span>
-        {l.pay_mode && <span className="pill pay">{l.pay_mode === 'subscribe' ? 'Subscribe' : 'Buy'} · NervixPay</span>}
-        {l.offer !== 'use' && <span className="pill sell">{l.offer === 'sell' ? 'For sale' : 'Use or buy'}</span>}
-        {l.price && <span className="pill">{l.price}</span>}
-      </div>
-    </Link>
+    <main>
+      {p.for && <RememberMode mode={mode} />}
+      <section className={`wrap ${s.hero}`} aria-labelledby="hero-title">
+        <div className={s.lead}>
+          <p className="eyebrow">The AI Business Network from DansLab</p>
+          <nav className={s.modes} aria-label="What brings you here">
+            <Link href={modeHref('look', view)} aria-current={mode === 'look' ? 'page' : undefined}>I’m looking for AI tools</Link>
+            <Link href={modeHref('build', view)} aria-current={mode === 'build' ? 'page' : undefined}>I’m building one</Link>
+          </nav>
+          <h1 id="hero-title">{copy.h1}</h1>
+          <p className={s.intro}>{copy.lead}</p>
+          {mode === 'look'
+            ? <SearchForm view={view} big />
+            : <p className={s.aside}>Free to list. Optional Buy or Subscribe button with <Link href="/sell">NervixPay</Link>.</p>}
+        </div>
+        <div className={s.proof}>
+          {mode === 'build'
+            ? <PrefillDemo />
+            : <Readout total={r.total} items={r.items.slice(0, READOUT_SIZE)} filtered={Boolean(view.q || view.category || offer)} mode={mode} />}
+        </div>
+      </section>
+
+      <Directory view={view} offer={offer} result={r} />
+      <Trust />
+      <HowItWorks />
+      <FinalCta mode={mode} />
+    </main>
   )
 }
 
-export default async function Home({ searchParams }: { searchParams: Promise<P> }) {
-  const p = await searchParams
-  const q = { q: p.q?.slice(0, 100), category: p.category, offer: p.offer }
-  const r = await browse(q, Number(p.page ?? 1))
+function SearchForm({ view, big = false }: { view: View; big?: boolean }) {
   return (
-    <main>
-      <section className="hero wrap">
-        <div className="hero-grid">
-          <div>
-            <div className="eyebrow">The DansLab AI Business Network</div>
-            <h1>A space for what you build with AI. <em>Show it. Share it. Sell it.</em></h1>
-            <p className="lead">
-              List your idea, app demo or production-ready app for free, in 30 seconds. People come here to find it,
-              use it, buy it, or subscribe to it, paying you directly with NervixPay.
-            </p>
-            <div className="ctas">
-              <Link href="/list" className="btn">List your project free</Link>
-              <a href="#directory" className="btn ghost">Explore the space</a>
-            </div>
-          </div>
-          <div className="orbit" aria-hidden="true">
-            <div className="core"><Logo size={64} /></div>
-            <div className="ring r1"><span>Ideas</span></div>
-            <div className="ring r2"><span>App demos</span></div>
-            <div className="ring r3"><span>Production apps</span></div>
-          </div>
-        </div>
+    <form className={big ? s.find : 'search'} action="/#directory" role="search">
+      <label className="sr" htmlFor={big ? 'q-hero' : 'q-dir'}>Search the directory</label>
+      <input id={big ? 'q-hero' : 'q-dir'} name="q" defaultValue={view.q ?? ''} maxLength={MAX_QUERY} placeholder="Search ideas, app demos, agents…" />
+      <input type="hidden" name="for" value={view.mode} />
+      {view.category && <input type="hidden" name="category" value={view.category} />}
+      {view.offer && <input type="hidden" name="offer" value={view.offer} />}
+      <button className={big ? undefined : 'btn ghost'} type="submit">Search</button>
+    </form>
+  )
+}
 
-        <div className="plans">
-          <div className="plan on">
-            <i>Every project</i>
-            <b>Listed free</b>
-            <span>Paste your link, we fill in the rest. Your page is live at once, and you can edit, pause or delete it any time.</span>
-          </div>
-          <div className="plan">
-            <i>Sell or subscribe</i>
-            <b>Paid with NervixPay</b>
-            <span>Add your NervixPay link and get a Buy or Subscribe button. USDT or USDC, wallet to wallet, straight to you. <Link href="/sell">How it works</Link></span>
-          </div>
-          <div className="plan">
-            <i>Optional boost</i>
-            <b>Featured · {FEATURE_USD} USD</b>
-            <span>Shown first in the directory and your category for a month. Paid with NervixPay too.</span>
-          </div>
-        </div>
-      </section>
+/** Product proof for visitors: the directory itself, a few entries, real data only. */
+function Readout({ total, items, filtered, mode }: { total: number; items: PublicListing[]; filtered: boolean; mode: Mode }) {
+  return (
+    <figure className={s.readout}>
+      <figcaption>
+        <span className={s.live}>{filtered ? 'Filtered' : 'Live'}</span> {total} {total === 1 ? 'project' : 'projects'}{filtered ? ' matching' : ' in the space'}
+      </figcaption>
+      {items.length > 0 ? (
+        <>
+          <ul>
+            {items.map((l) => (
+              <li key={l.id}>
+                <Link href={`/l/${l.slug}`}>
+                  <Avatar slug={l.slug} name={l.name} logo={l.logo || undefined} size={40} radius={10} />
+                  <span><b>{l.name}</b><small>{l.tagline}</small></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <a className={s.more} href="#directory">See them all</a>
+        </>
+      ) : (
+        <p className={s.aside}>
+          No projects match this filter yet.{' '}
+          <Link href={`/?for=${mode}&offer=${ANY_OFFER}#directory`}>Show all projects</Link>
+        </p>
+      )}
+    </figure>
+  )
+}
 
-      <section className="dir wrap" id="directory">
-        <h2>Explore the space <span className="count">{r.total} projects</span></h2>
-        <form className="search" action="/#directory">
-          <input name="q" defaultValue={p.q ?? ''} placeholder="Search ideas, app demos, AI apps, agents…" aria-label="Search" maxLength={100} />
-          {p.category && <input type="hidden" name="category" value={p.category} />}
-          {p.offer && <input type="hidden" name="offer" value={p.offer} />}
-          <button className="btn ghost" type="submit">Search</button>
-        </form>
-        <div className="chips">
-          <Link className={!p.category ? 'on' : ''} href={href({ ...q, category: undefined })}>All</Link>
-          {CATEGORIES.map((c) => <Link key={c.id} className={p.category === c.id ? 'on' : ''} href={href({ ...q, category: c.id })}>{c.label}</Link>)}
-          <span className="sep" />
-          {OFFERS.filter((o) => o.id !== 'both').map((o) => (
-            <Link key={o.id} className={p.offer === o.id ? 'on' : ''} href={href({ ...q, offer: p.offer === o.id ? undefined : o.id })}>{o.label}</Link>
-          ))}
-        </div>
-        {r.items.length
-          ? <div className="grid">{r.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
-          : <div className="empty">Nothing matches yet. <Link href="/list">Be the first to bring it into the space.</Link></div>}
-        {r.pages > 1 && (
-          <nav className="pager" aria-label="Pages">
-            {r.page > 1 && <Link className="btn ghost" href={href({ ...q, page: String(r.page - 1) })}>← Newer</Link>}
-            <span>Page {r.page} of {r.pages}</span>
-            {r.page < r.pages && <Link className="btn ghost" href={href({ ...q, page: String(r.page + 1) })}>Older →</Link>}
-          </nav>
+type Result = Awaited<ReturnType<typeof browse>>
+
+function Directory({ view, offer, result: r }: { view: View; offer?: string; result: Result }) {
+  const offers = [{ id: ANY_OFFER, label: 'Anything' }, { id: 'use', label: 'Use it' }, { id: 'sell', label: 'For sale' }]
+  const offerOn = (id: string) => (offer ?? ANY_OFFER) === id
+  const hasFilters = Boolean(view.q || view.category || offer)
+  const resetHref = `/?for=${view.mode}&offer=${ANY_OFFER}#directory`
+  return (
+    <section className={`wrap ${s.dir}`} id="directory" aria-labelledby="dir-title">
+      <div className={s.dirHead}>
+        <h2 id="dir-title">Explore the space</h2>
+        <span className={s.count}>{r.total} {r.total === 1 ? 'project' : 'projects'}</span>
+        {hasFilters && <Link className="clear-link" href={resetHref}>Clear filters</Link>}
+      </div>
+      {view.mode === 'build' && <SearchForm view={view} />}
+      <nav className="chips" aria-label="Category">
+        <Link aria-current={!view.category ? 'page' : undefined} href={dirHref(view, { category: undefined })}>All</Link>
+        {CATEGORIES.map((c) => (
+          <Link key={c.id} aria-current={view.category === c.id ? 'page' : undefined} href={dirHref(view, { category: c.id })}>{c.label}</Link>
+        ))}
+      </nav>
+      <nav className="chips" aria-label="Offer">
+        {offers.map((o) => (
+          <Link key={o.id} aria-current={offerOn(o.id) ? 'page' : undefined} href={dirHref(view, { offer: o.id })}>{o.label}</Link>
+        ))}
+      </nav>
+      {r.items.length
+        ? <div className="grid">{r.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
+        : (
+          <div className="empty">
+            {hasFilters ? (
+              <>No projects match these filters. <Link href={resetHref}>Clear filters</Link> or <Link href="/list">list yours free</Link>.</>
+            ) : (
+              <>Nothing here yet. <Link href="/list">Be the first to list something in this corner of the space.</Link></>
+            )}
+          </div>
         )}
-      </section>
-    </main>
+      {r.pages > 1 && (
+        <nav className="pager" aria-label="Pages">
+          {r.page > 1 && <Link className="btn ghost" href={dirHref(view, { page: r.page - 1 })}>Newer</Link>}
+          <span>Page {r.page} of {r.pages}</span>
+          {r.page < r.pages && <Link className="btn ghost" href={dirHref(view, { page: r.page + 1 })}>Older</Link>}
+        </nav>
+      )}
+    </section>
+  )
+}
+
+function Trust() {
+  return (
+    <section className={`wrap ${s.trust}`} aria-labelledby="trust-title">
+      <h2 id="trust-title" className="sr">What it costs</h2>
+      <ul>
+        <li><span>Nervix Space takes</span><b>0%</b><p>Listing is free. No accounts: you get a private manage link.</p></li>
+        <li><span>NervixPay charges the seller</span><b>0.2%</b><p>Capped at $2. Nervix Space takes nothing on top.</p></li>
+        <li><span>Payments go</span><b>Wallet to wallet</b><p>USDT or USDC, verified on-chain, never custodied.</p></li>
+      </ul>
+    </section>
+  )
+}
+
+function HowItWorks() {
+  return (
+    <section className={`wrap ${s.how}`} aria-labelledby="how-title">
+      <h2 id="how-title">How it works</h2>
+      <ol>
+        <li><b>Paste your link</b><span>We read the name, description and logo from your page. About 30 seconds, free.</span></li>
+        <li><b>Add NervixPay, if you sell</b><span>Your listing gets a Buy or Subscribe button. Buyers pay your wallet directly.</span></li>
+        <li><b>Feature it, if you like</b><span>Featured · {FEATURE_USD} USD / 30 days: shown first in the directory and your category.</span></li>
+      </ol>
+    </section>
+  )
+}
+
+function FinalCta({ mode }: { mode: Mode }) {
+  return (
+    <section className={`wrap ${s.final}`} aria-labelledby="final-title">
+      <h2 id="final-title">{mode === 'build' ? 'Your listing is 30 seconds away.' : 'Built something with AI?'}</h2>
+      <p>List your AI idea, app demo or production-ready app for free.</p>
+      <div className={s.ctas}>
+        <Link href="/list" className="btn">List your project free</Link>
+        <Link href="/sell" className="btn ghost">Sell with NervixPay</Link>
+      </div>
+    </section>
   )
 }
