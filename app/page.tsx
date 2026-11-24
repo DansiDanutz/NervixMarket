@@ -59,7 +59,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Par
             : <p className={s.aside}>Free to list. Optional Buy or Subscribe button with <Link href="/sell">NervixPay</Link>.</p>}
         </div>
         <div className={s.proof}>
-          {mode === 'build' ? <PrefillDemo /> : <Readout total={r.total} items={r.items.slice(0, READOUT_SIZE)} />}
+          {mode === 'build'
+            ? <PrefillDemo />
+            : <Readout total={r.total} items={r.items.slice(0, READOUT_SIZE)} filtered={Boolean(view.q || view.category || offer)} mode={mode} />}
         </div>
       </section>
 
@@ -85,21 +87,32 @@ function SearchForm({ view, big = false }: { view: View; big?: boolean }) {
 }
 
 /** Product proof for visitors: the directory itself, a few entries, real data only. */
-function Readout({ total, items }: { total: number; items: PublicListing[] }) {
+function Readout({ total, items, filtered, mode }: { total: number; items: PublicListing[]; filtered: boolean; mode: Mode }) {
   return (
     <figure className={s.readout}>
-      <figcaption><span className={s.live}>Live</span> {total} {total === 1 ? 'project' : 'projects'} in the space</figcaption>
-      <ul>
-        {items.map((l) => (
-          <li key={l.id}>
-            <Link href={`/l/${l.slug}`}>
-              <Avatar slug={l.slug} name={l.name} logo={l.logo || undefined} size={40} radius={10} />
-              <span><b>{l.name}</b><small>{l.tagline}</small></span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <a className={s.more} href="#directory">See them all</a>
+      <figcaption>
+        <span className={s.live}>{filtered ? 'Filtered' : 'Live'}</span> {total} {total === 1 ? 'project' : 'projects'}{filtered ? ' matching' : ' in the space'}
+      </figcaption>
+      {items.length > 0 ? (
+        <>
+          <ul>
+            {items.map((l) => (
+              <li key={l.id}>
+                <Link href={`/l/${l.slug}`}>
+                  <Avatar slug={l.slug} name={l.name} logo={l.logo || undefined} size={40} radius={10} />
+                  <span><b>{l.name}</b><small>{l.tagline}</small></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <a className={s.more} href="#directory">See them all</a>
+        </>
+      ) : (
+        <p className={s.aside}>
+          No projects match this filter yet.{' '}
+          <Link href={`/?for=${mode}&offer=${ANY_OFFER}#directory`}>Show all projects</Link>
+        </p>
+      )}
     </figure>
   )
 }
@@ -109,11 +122,14 @@ type Result = Awaited<ReturnType<typeof browse>>
 function Directory({ view, offer, result: r }: { view: View; offer?: string; result: Result }) {
   const offers = [{ id: ANY_OFFER, label: 'Anything' }, { id: 'use', label: 'Use it' }, { id: 'sell', label: 'For sale' }]
   const offerOn = (id: string) => (offer ?? ANY_OFFER) === id
+  const hasFilters = Boolean(view.q || view.category || offer)
+  const resetHref = `/?for=${view.mode}&offer=${ANY_OFFER}#directory`
   return (
     <section className={`wrap ${s.dir}`} id="directory" aria-labelledby="dir-title">
       <div className={s.dirHead}>
         <h2 id="dir-title">Explore the space</h2>
         <span className={s.count}>{r.total} {r.total === 1 ? 'project' : 'projects'}</span>
+        {hasFilters && <Link className="clear-link" href={resetHref}>Clear filters</Link>}
       </div>
       {view.mode === 'build' && <SearchForm view={view} />}
       <nav className="chips" aria-label="Category">
@@ -129,7 +145,15 @@ function Directory({ view, offer, result: r }: { view: View; offer?: string; res
       </nav>
       {r.items.length
         ? <div className="grid">{r.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
-        : <div className="empty">Nothing here yet. <Link href="/list">Be the first to list something in this corner of the space.</Link></div>}
+        : (
+          <div className="empty">
+            {hasFilters ? (
+              <>No projects match these filters. <Link href={resetHref}>Clear filters</Link> or <Link href="/list">list yours free</Link>.</>
+            ) : (
+              <>Nothing here yet. <Link href="/list">Be the first to list something in this corner of the space.</Link></>
+            )}
+          </div>
+        )}
       {r.pages > 1 && (
         <nav className="pager" aria-label="Pages">
           {r.page > 1 && <Link className="btn ghost" href={dirHref(view, { page: r.page - 1 })}>Newer</Link>}

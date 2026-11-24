@@ -63,7 +63,18 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
           <dl className="facts">
             {l.price && <><dt>Price</dt><dd>{l.price}</dd></>}
             <dt>Website</dt><dd><a href={l.website} target="_blank" rel="noopener noreferrer nofollow ugc">{host}</a></dd>
-            {l.contact && <><dt>Contact</dt><dd>{contact ? <a href={contact} rel="nofollow ugc noopener noreferrer">{l.contact}</a> : l.contact}</dd></>}
+            {l.contact && (
+              <>
+                <dt>Contact</dt>
+                <dd>
+                  {contact
+                    ? contact.startsWith('https://')
+                      ? <a href={contact} target="_blank" rel="noopener noreferrer nofollow ugc">{l.contact}</a>
+                      : <a href={contact} rel="nofollow ugc">{l.contact}</a>
+                    : l.contact}
+                </dd>
+              </>
+            )}
           </dl>
         </div>
         <aside className={s.actions} aria-label="Actions">

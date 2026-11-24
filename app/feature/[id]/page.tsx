@@ -27,7 +27,7 @@ export default async function Feature({ params }: { params: Promise<{ id: string
       <h1>{featured ? 'Featured in the space.' : 'Put it at the top of the space.'}</h1>
       <div className="box">
         {featured
-          ? <p><span className="status live">FEATURED</span> <span style={{ marginLeft: 8 }}>until {day(l.featured_until!)}</span></p>
+          ? <p><span className="status live">FEATURED</span> <span className="pill-gap">until {day(l.featured_until!)}</span></p>
           : <p>Featured projects are shown first in the directory and in their category, with a Featured badge, for {days} days.</p>}
         <p>Pay <b>{FEATURE_USD} USD in USDT or USDC</b> through NervixPay, from your own wallet. It is verified on-chain and applied by itself{featured ? `: each payment adds another ${days} days` : ''}.</p>
         <div className="row-actions">
@@ -36,7 +36,7 @@ export default async function Feature({ params }: { params: Promise<{ id: string
             : <p className="err">Featured spots are not switched on yet.</p>}
           <Link className="btn ghost" href={`/l/${l.slug}`}>See the page</Link>
         </div>
-        {!featured && pay && <Poll id={l.id} />}
+        {pay && <Poll id={l.id} currentUntil={l.featured_until} />}
       </div>
     </main>
   )

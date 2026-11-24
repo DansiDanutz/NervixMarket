@@ -91,7 +91,7 @@ form.f { display: grid; gap: 18px }
 .detail .desc { white-space: pre-wrap; color: #dfe2f0 }
 .facts { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; margin: 22px 0; font-size: 16px }
 .facts dt { color: var(--muted) }
-.facts dd { margin: 0 }
+.facts dd { margin: 0; overflow-wrap: anywhere }
 details.more { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel) }
 details.more summary { cursor: pointer; font-size: 15px; font-weight: 600; min-height: 28px }
 details.more .inner { margin-top: 14px }
@@ -113,6 +113,13 @@ fieldset.paybox a { color: var(--accent-2) }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important }
 }
 #content:focus { outline: none }
-.row-actions { display: flex; gap: 10px; flex-wrap: wrap }
+.row-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center }
+.confirm-row { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center }
 .ref { margin-top: 18px }
 .facts dd a, .foot-actions a { display: inline-flex; align-items: center; min-height: var(--target) }
+.pill-gap { margin-left: 8px }
+.manage-box { margin-bottom: 22px }
+.recover-form { margin-top: 14px }
+.poll-note { margin: 14px 0 0 }
+.clear-link { display: inline-flex; align-items: center; min-height: var(--target); margin-left: auto; color: var(--accent-2); font-size: 15px }
+.honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none }

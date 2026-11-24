@@ -16,6 +16,8 @@ export function Manage({ id }: { id: string }) {
   const [errors, setErrors] = useState<Errors>({})
   const [msg, setMsg] = useState<string | null>(null)
   const [fail, setFail] = useState<string | null>(null)
+  const [deleted, setDeleted] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }))
 
@@ -38,20 +40,26 @@ export function Manage({ id }: { id: string }) {
     if (!t) { setFail('This page needs your private manage link (the one you got when you listed).'); return }
     fetch(`/api/listings/${id}`, { headers: { 'x-manage-token': t }, cache: 'no-store' })
       .then(async (r) => {
-        const j = await r.json()
-        if (!r.ok || !j.owner) throw new Error(r.status === 404 ? 'This listing does not exist anymore.' : 'This manage link is not valid. Ask for a new one below.')
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok || !j.owner) {
+          throw new Error(r.status === 404 ? 'This listing does not exist anymore.' : 'This manage link is not valid. Ask for a new one below.')
+        }
         load(j)
       })
-      .catch((e) => setFail(e.message))
+      .catch((e) => setFail(e.message || 'Could not load your listing right now.'))
   }, [id])
 
   async function call(method: 'PATCH' | 'DELETE', body?: unknown) {
     setBusy(true); setMsg(null); setFail(null)
     try {
-      const r = await fetch(`/api/listings/${id}`, { method, headers: { 'x-manage-token': token ?? '', 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
-      const j = await r.json()
+      const r = await fetch(`/api/listings/${id}`, {
+        method,
+        headers: { 'x-manage-token': token ?? '', 'content-type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      })
+      const j = await r.json().catch(() => ({}))
       if (r.status === 422) { setErrors(j.errors ?? {}); return null }
-      if (!r.ok) throw new Error(j.error ?? `HTTP ${r.status}`)
+      if (!r.ok) throw new Error(j.error ?? `Request failed (HTTP ${r.status}).`)
       setErrors({})
       return j
     } catch (e) { setFail((e as Error).message); return null } finally { setBusy(false) }
@@ -68,17 +76,21 @@ export function Manage({ id }: { id: string }) {
     if (j) { load(j); setMsg(j.status === 'paused' ? 'Paused: your listing is hidden until you resume it.' : 'Your listing is live again.') }
   }
   async function remove() {
-    if (!confirm('Delete this listing for good? This cannot be undone.')) return
     const j = await call('DELETE')
-    if (j) { setSt(null); setMsg(null); setFail('Your listing was deleted.') }
+    if (j) { setSt(null); setMsg(null); setConfirmDelete(false); setDeleted(true); setFail('Your listing was deleted.') }
   }
 
   if (!st) {
     return (
       <main className="wrap page">
         <div className="eyebrow">Manage your listing</div>
-        <h1>{fail ? 'Hmm.' : 'Loading…'}</h1>
-        {fail && <div className="box"><p>{fail}</p><Recover /></div>}
+        <h1>{deleted ? 'Listing deleted' : fail ? 'Manage link needed' : 'Loading…'}</h1>
+        {fail && (
+          <div className="box">
+            <p role={deleted ? 'status' : 'alert'}>{fail}</p>
+            {deleted ? <div className="row-actions"><Link className="btn" href="/#directory">Explore the directory</Link><Link className="btn ghost" href="/list">List another project</Link></div> : <Recover />}
+          </div>
+        )}
       </main>
     )
   }
@@ -88,15 +100,28 @@ export function Manage({ id }: { id: string }) {
     <main className="wrap page">
       <div className="eyebrow">Manage your listing</div>
       <h1>{st.name}</h1>
-      <div className="box" style={{ marginBottom: 22 }}>
-        <p><span className={`status ${live ? 'live' : ''}`}>{live ? 'LIVE' : st.status === 'paused' ? 'PAUSED' : 'UNDER REVIEW'}</span>
-          {st.featured && st.featured_until && <span className="pill founding" style={{ marginLeft: 8 }}>Featured until {new Date(st.featured_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>}</p>
+      <div className="box manage-box">
+        <p>
+          <span className={`status ${live ? 'live' : ''}`}>{live ? 'LIVE' : st.status === 'paused' ? 'PAUSED' : 'UNDER REVIEW'}</span>
+          {st.featured && st.featured_until && (
+            <span className="pill founding pill-gap">
+              Featured until {new Date(st.featured_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+          )}
+        </p>
         {st.status === 'hidden' && <p>Your listing was reported by several people and is hidden until the team reviews it.</p>}
         <div className="row-actions">
           {live && <Link className="btn ghost" href={`/l/${st.slug}`}>See your page</Link>}
-          {st.status !== 'hidden' && <button className="btn ghost" onClick={toggle} disabled={busy}>{st.status === 'paused' ? 'Resume' : 'Pause'}</button>}
+          {st.status !== 'hidden' && <button type="button" className="btn ghost" onClick={toggle} disabled={busy}>{st.status === 'paused' ? 'Resume' : 'Pause'}</button>}
           <Link className="btn ghost" href={`/feature/${id}`}>{st.featured ? 'Extend Featured' : `Feature it · ${FEATURE_USD} USD`}</Link>
-          <button className="btn ghost danger" onClick={remove} disabled={busy}>Delete</button>
+          {confirmDelete ? (
+            <span className="confirm-row" role="group" aria-label="Confirm deletion">
+              <button type="button" className="btn ghost danger" onClick={remove} disabled={busy}>{busy ? 'Deleting…' : 'Confirm delete'}</button>
+              <button type="button" className="btn ghost" onClick={() => setConfirmDelete(false)} disabled={busy}>Cancel</button>
+            </span>
+          ) : (
+            <button type="button" className="btn ghost danger" onClick={() => setConfirmDelete(true)} disabled={busy}>Delete</button>
+          )}
         </div>
       </div>
       <form className="f" onSubmit={save} noValidate>
@@ -106,8 +131,8 @@ export function Manage({ id }: { id: string }) {
           <div><b>Save changes</b><small>Owner email: {st.owner_email}</small></div>
           <button className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save →'}</button>
         </div>
-        {msg && <p className="note">{msg}</p>}
-        {fail && <span className="err">{fail}</span>}
+        {msg && <p className="note" role="status">{msg}</p>}
+        {fail && <p className="err" role="alert">{fail}</p>}
       </form>
     </main>
   )
@@ -115,19 +140,30 @@ export function Manage({ id }: { id: string }) {
 
 function Recover() {
   const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
   const [out, setOut] = useState<string | null>(null)
   async function go(e: React.FormEvent) {
     e.preventDefault()
-    const r = await fetch('/api/manage/recover', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) })
-    const j = await r.json().catch(() => ({}))
-    setOut(j.message ?? j.error ?? 'Something went wrong.')
+    setBusy(true); setOut(null)
+    try {
+      const r = await fetch('/api/manage/recover', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) })
+      const j = await r.json().catch(() => ({}))
+      setOut(j.message ?? j.error ?? 'Something went wrong.')
+    } catch {
+      setOut('Could not reach the server. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
   return (
-    <form className="f" onSubmit={go} style={{ marginTop: 14 }}>
+    <form className="f recover-form" onSubmit={go}>
       <label>Lost your link? <span className="h">we email a new one to the address you listed with</span>
-        <div className="urlrow"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required /><button className="btn ghost">Send</button></div>
+        <div className="urlrow">
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
+          <button className="btn ghost" disabled={busy}>{busy ? 'Sending…' : 'Send'}</button>
+        </div>
       </label>
-      {out && <p className="note">{out}</p>}
+      {out && <p className="note" role="status">{out}</p>}
     </form>
   )
 }

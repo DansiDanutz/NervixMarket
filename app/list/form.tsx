@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FEATURE_USD } from '@/lib/listing'
 import { EMPTY, Field, ListingFields, type Errors, type Values } from './fields'
 import s from './list.module.css'
@@ -40,6 +40,7 @@ export function ListForm() {
   const [note, setNote] = useState<string | null>(null)
   const [fail, setFail] = useState<string | null>(null)
   const [done, setDone] = useState<Done | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }))
 
   // Arriving from the home page's paste demo: /list?website=https://…
@@ -55,7 +56,7 @@ export function ListForm() {
     setFilling(true); setNote(null)
     try {
       const r = await fetch(`/api/prefill?url=${encodeURIComponent(url)}`)
-      const j = await r.json()
+      const j = await r.json().catch(() => ({}))
       if (!r.ok) { setNote(`${j.error ?? 'Could not read that page.'} Fill in the fields below.`); return }
       setFilled(url)
       // only fill what the owner hasn't typed yet
@@ -70,9 +71,17 @@ export function ListForm() {
     const body = { ...v, company: (new FormData(e.currentTarget).get('company') as string) ?? '' }
     try {
       const r = await fetch('/api/listings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-      const j = await r.json()
-      if (r.status === 422) { setErrors(j.errors); return }
-      if (!r.ok) throw new Error(j.error ?? `HTTP ${r.status}`)
+      const j = await r.json().catch(() => ({}))
+      if (r.status === 422 && j.errors) {
+        setErrors(j.errors)
+        const firstBad = Object.keys(j.errors)[0]
+        if (firstBad) {
+          const el = formRef.current?.querySelector<HTMLElement>(`[name="${CSS.escape(firstBad)}"]`)
+          el?.focus()
+        }
+        return
+      }
+      if (!r.ok) throw new Error(j.error ?? `Could not publish right now (HTTP ${r.status}).`)
       setErrors({}); setDone(j)
       window.scrollTo({ top: 0 })
     } catch (err) { setFail((err as Error).message) } finally { setBusy(false) }
@@ -86,7 +95,7 @@ export function ListForm() {
       <h1>List your project in 30 seconds</h1>
       <p className="sub">Paste your link and we fill in the rest. An idea, an app demo or a production-ready app: listing is free, and your page goes live as soon as you submit. Want to sell it or charge a subscription? Add your NervixPay link.</p>
       <Stepper at={progress(v)} />
-      <form className="f" onSubmit={submit} noValidate>
+      <form ref={formRef} className="f" onSubmit={submit} noValidate>
         <Field name="website" label="Your project's link" hint="we read the name, description and logo from it" errors={errors}>
           <div className="urlrow">
             <input name="website" type="url" placeholder="https://" value={v.website} className={errors.website ? 'bad' : undefined}
@@ -94,9 +103,9 @@ export function ListForm() {
             <button type="button" className="btn ghost" onClick={() => autofill()} disabled={filling}>{filling ? 'Reading…' : 'Autofill'}</button>
           </div>
         </Field>
-        {note && <p className="note">{note}</p>}
+        {note && <p className="note" role="status" aria-live="polite">{note}</p>}
         <ListingFields v={v} set={set} errors={errors} withEmail />
-        <input name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
+        <input name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="honeypot" />
         <div className="payline">
           <div><b>Free</b><small>Listing is free, for good. You get a private link to edit, pause or delete it.</small></div>
           <button className="btn" disabled={busy}>{busy ? 'Publishing…' : 'Publish my listing'}</button>
@@ -108,7 +117,16 @@ export function ListForm() {
 }
 
 function Welcome({ d }: { d: Done }) {
-  const [copied, setCopied] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  async function copyLink() {
+    try {
+      if (!navigator.clipboard) throw new Error('no clipboard')
+      await navigator.clipboard.writeText(d.manage)
+      setCopyState('copied')
+    } catch {
+      setCopyState('failed')
+    }
+  }
   return (
     <main className="wrap page">
       <div className="eyebrow">You’re in the space</div>
@@ -118,10 +136,12 @@ function Welcome({ d }: { d: Done }) {
         <p><b>Save your private manage link.</b> It is the only way to edit, pause or delete your listing{d.mailed ? ' (we also emailed it to you)' : ''}. Anyone with it can change your listing, so keep it to yourself.</p>
         <div className="urlrow">
           <input readOnly value={d.manage} onFocus={(e) => e.currentTarget.select()} aria-label="Your manage link" />
-          <button type="button" className="btn ghost" onClick={() => { navigator.clipboard?.writeText(d.manage).then(() => setCopied(true)) }}>{copied ? 'Copied' : 'Copy'}</button>
+          <button type="button" className="btn ghost" onClick={copyLink}>{copyState === 'copied' ? 'Copied' : 'Copy'}</button>
         </div>
+        {copyState === 'failed' && <p className="note" role="status">Select the link above and copy it manually.</p>}
         <div className={s.welcomeActions}>
           <Link className="btn" href={d.page}>See your page</Link>
+          <a className="btn ghost" href={d.manage}>Open manage page</a>
           <Link className="btn ghost" href={`/feature/${d.id}`}>Feature it · {FEATURE_USD} USD</Link>
         </div>
       </div>
