@@ -34,12 +34,13 @@ Network: anyone can list an idea, an app demo, or a production-ready app, **for 
    `ADMIN_TOKEN` (moderation).
 
 ## API (agents can use it)
+- `GET /api/health` — readiness & database reachability check (200 ok / 503 degraded)
 - `GET /api/listings?q=&category=&offer=&page=` — live listings, 36 a page, featured first (never private fields)
 - `POST /api/listings` — submit; returns `{ id, slug, page, manage, mailed }`
 - `GET /api/listings/:id` — public state; with `x-manage-token`, also the owner's view
 - `PATCH /api/listings/:id` / `DELETE /api/listings/:id` — owner edits, `status: active|paused`, delete (`x-manage-token`)
 - `POST /api/listings/:id/report` — flag a listing
-- `GET /api/prefill?url=` — suggested fields from a public https page
+- `GET /api/prefill?url=` — suggested fields from a public https page (rate-limited, SSRF-hardened)
 - `PATCH /api/admin/listings/:id` — `{ status: active|hidden|removed }` with `Authorization: Bearer $ADMIN_TOKEN`
 
 ## Develop

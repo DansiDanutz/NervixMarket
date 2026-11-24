@@ -93,8 +93,25 @@ const LIMITS: Record<keyof ListingInput, number> = {
 export const slugify = (s: string) =>
   s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'listing'
 
-const isHttps = (u: string) => { try { return new URL(u).protocol === 'https:' } catch { return false } }
+const isHttps = (u: string) => {
+  try {
+    const parsed = new URL(u)
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return false
+    const host = parsed.hostname.replace(/^\[|\]$/g, '').replace(/\.+$/, '').toLowerCase()
+    if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return false
+    if (/^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return false
+    if (host === '::1' || host === '::' || host.startsWith('::ffff:')) return false
+    return host.includes('.')
+  } catch { return false }
+}
 const isEmail = (e: string) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,}$/i.test(e)
+
+/** Strip ASCII control chars and Unicode bidirectional override chars (preserving newlines in description). */
+const sanitizeText = (s: string, keepNewlines = false) =>
+  s
+    .replace(/[\u202A-\u202E\u2066-\u2069\u200E\u200F]/g, '')
+    .replace(keepNewlines ? /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g : /[\x00-\x1F\x7F]/g, '')
+    .trim()
 
 /** Hosts whose payment links are accepted: NervixPay, plus NERVIXPAY_BASE_URL when it points elsewhere (staging). */
 export function payHosts(): string[] {
@@ -119,7 +136,7 @@ type Raw = Partial<Record<keyof ListingInput, unknown>>
 export function validate(raw: Raw, opts: { partial?: boolean } = {}):
   { ok: true; value: ListingInput } | { ok: false; errors: Record<string, string> } {
   const has = (k: keyof ListingInput) => !opts.partial || raw[k] !== undefined
-  const str = (k: keyof ListingInput) => (typeof raw[k] === 'string' ? (raw[k] as string).trim() : '')
+  const str = (k: keyof ListingInput) => (typeof raw[k] === 'string' ? sanitizeText(raw[k] as string, k === 'description') : '')
   const v: ListingInput = {
     name: str('name'), tagline: str('tagline'), description: str('description'), category: str('category'),
     offer: str('offer') || 'use', price: str('price'), website: str('website'), contact: str('contact'), logo: str('logo'),

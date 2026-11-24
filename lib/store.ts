@@ -55,7 +55,7 @@ export class FileStore implements Store {
   }
   private async save(d: FileData) {
     await fs.mkdir(path.dirname(this.file), { recursive: true })
-    const tmp = `${this.file}.tmp`
+    const tmp = `${this.file}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`
     await fs.writeFile(tmp, JSON.stringify(d, null, 1))
     await fs.rename(tmp, this.file)
   }
@@ -70,9 +70,16 @@ export class FileStore implements Store {
   async bySlug(slug: string) { return (await this.load()).listings.find((l) => l.slug === slug) ?? null }
   async search({ q, category, offer }: Query, limit: number, offset: number) {
     const t = Date.now()
-    const all = (await this.load()).listings
-      .filter((l) => isLive(l) && (!category || l.category === category) && offerMatches(l, offer) && matches(l, q))
-      .sort((a, b) => Number(isFeatured(b, t)) - Number(isFeatured(a, t)) || b.created_at.localeCompare(a.created_at))
+    const rows = (await this.load()).listings
+    const all = rows
+      .map((l, idx) => ({ l, idx }))
+      .filter(({ l }) => isLive(l) && (!category || l.category === category) && offerMatches(l, offer) && matches(l, q))
+      .sort((a, b) =>
+        Number(isFeatured(b.l, t)) - Number(isFeatured(a.l, t))
+        || b.l.created_at.localeCompare(a.l.created_at)
+        || b.idx - a.idx,
+      )
+      .map(({ l }) => l)
     return { items: all.slice(offset, offset + limit), total: all.length }
   }
   async update(id: string, patch: Partial<Listing>) {
@@ -103,6 +110,7 @@ export class FileStore implements Store {
     if (d.payments[orderId]) return null
     const l = d.listings.find((x) => x.id === listingId)
     if (!l) throw new Error('unknown listing')
+    if (l.status === 'removed') throw new Error('removed listing')
     const until = extendUntil(l.featured_until, days)
     d.payments[orderId] = { listingId, ...detail, at: now() }
     l.orders = [...l.orders, orderId]
@@ -114,6 +122,8 @@ export class FileStore implements Store {
     return (await this.load()).listings.filter((l) => l.owner_email === email && l.status !== 'removed')
   }
 }
+
+const SUPABASE_TIMEOUT_MS = 10_000
 
 export class SupabaseStore implements Store {
   kind = 'supabase' as const
@@ -128,7 +138,8 @@ export class SupabaseStore implements Store {
   }
   private base = () => `${this.url.replace(/\/$/, '')}/rest/v1/`
   private async rest(p: string, init: RequestInit = {}, prefer?: string) {
-    const r = await this.f(`${this.base()}${p}`, { ...init, cache: 'no-store', headers: this.headers(prefer ? { prefer } : {}) })
+    const signal = init.signal ?? AbortSignal.timeout(SUPABASE_TIMEOUT_MS)
+    const r = await this.f(`${this.base()}${p}`, { ...init, signal, cache: 'no-store', headers: this.headers(prefer ? { prefer } : {}) })
     if (!r.ok) { const e = new Error(`database ${r.status}: ${(await r.text()).slice(0, 200)}`); (e as Error & { status?: number }).status = r.status; throw e }
     const t = await r.text()
     return t ? JSON.parse(t) : null
@@ -163,7 +174,7 @@ export class SupabaseStore implements Store {
   }
   async recentByIp(ipHash: string, sinceIso: string) {
     const r = await this.f(`${this.base()}listings?select=id&ip_hash=eq.${encodeURIComponent(ipHash)}&created_at=gt.${encodeURIComponent(sinceIso)}&limit=1`, {
-      method: 'HEAD', cache: 'no-store', headers: this.headers({ prefer: 'count=exact' }),
+      method: 'HEAD', signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS), cache: 'no-store', headers: this.headers({ prefer: 'count=exact' }),
     })
     if (!r.ok) throw new Error(`database ${r.status}`)
     return Number((r.headers.get('content-range') ?? '*/0').split('/')[1]) || 0
@@ -196,10 +207,15 @@ export interface Page { items: PublicListing[]; total: number; page: number; pag
 
 /** One page of the public directory. Page 1 starts with DansLab's founding projects that match. */
 export async function browse(q: Query, page = 1): Promise<Page> {
+  const cleanQ: Query = {
+    q: q.q?.slice(0, 100) || undefined,
+    category: q.category || undefined,
+    offer: q.offer || undefined,
+  }
   const p = Number.isInteger(page) && page > 0 && page < 10_000 ? page : 1
-  const founding = FOUNDING.filter((f) => (!q.category || f.category === q.category) && offerMatches(f, q.offer) && matches(f, q.q))
+  const founding = FOUNDING.filter((f) => (!cleanQ.category || f.category === cleanQ.category) && offerMatches(f, cleanQ.offer) && matches(f, cleanQ.q))
   let res: { items: Listing[]; total: number } = { items: [], total: 0 }
-  try { res = await store().search(q, PAGE_SIZE, (p - 1) * PAGE_SIZE) } catch (e) { console.error('listings unavailable', e) }
+  try { res = await store().search(cleanQ, PAGE_SIZE, (p - 1) * PAGE_SIZE) } catch (e) { console.error('listings unavailable', e) }
   return {
     items: [...(p === 1 ? founding : []), ...res.items].map(toPublic),
     total: founding.length + res.total,
