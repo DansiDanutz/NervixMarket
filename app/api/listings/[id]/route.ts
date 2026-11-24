@@ -78,7 +78,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
     const updated = await store().update(id, patch)
     if (!updated) return notFound()
-    await refresh('/', `/l/${l.slug}`, '/sitemap.xml')
+    await refresh('/', `/l/${l.slug}`, '/sitemap.xml', '/feed.xml')
     return NextResponse.json(
       { ...toPublic(updated), live: isLive(updated), featured: isFeatured(updated), owner: true, owner_email: updated.owner_email },
       { headers: NO_STORE_HEADERS },
@@ -101,7 +101,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
       return NextResponse.json({ error: 'This manage link is not valid.' }, { status: 403, headers: NO_STORE_HEADERS })
     }
     await store().update(id, { status: 'removed', edit_token_hash: '' })
-    await refresh('/', `/l/${l.slug}`, '/sitemap.xml')
+    await refresh('/', `/l/${l.slug}`, '/sitemap.xml', '/feed.xml')
     return NextResponse.json({ ok: true, removed: true }, { headers: NO_STORE_HEADERS })
   } catch (err) {
     console.error('listing delete failed', id, err)

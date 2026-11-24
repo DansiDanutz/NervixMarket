@@ -42,6 +42,8 @@ export function SiteFooter() {
           <li><Link href="/#directory">Explore</Link></li>
           <li><Link href="/list">List free</Link></li>
           <li><Link href="/sell">Sell with NervixPay</Link></li>
+          <li><Link href="/agents">API &amp; MCP</Link></li>
+          <li><a href="/feed.xml">RSS</a></li>
         </ul>
       </div>
     </footer>

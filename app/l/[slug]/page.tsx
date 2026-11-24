@@ -5,6 +5,7 @@ import { CATEGORIES, OFFERS, PAY_MODES, isFeatured } from '@/lib/listing'
 import { siteUrl } from '@/lib/owner'
 import { findLive } from '@/lib/store'
 import { Avatar } from '@/components/avatar'
+import { BadgeEmbed } from '@/components/badge-embed'
 import { Report } from './report'
 import s from './listing.module.css'
 
@@ -84,6 +85,8 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
           <Link className={s.listYours} href="/list">List yours free</Link>
         </aside>
       </div>
+
+      <BadgeEmbed slug={l.slug} name={l.name} baseUrl={siteUrl()} />
 
       {!l.founding && (
         <div className="foot-actions">

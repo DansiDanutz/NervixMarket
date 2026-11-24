@@ -123,3 +123,12 @@ fieldset.paybox a { color: var(--accent-2) }
 .poll-note { margin: 14px 0 0 }
 .clear-link { display: inline-flex; align-items: center; min-height: var(--target); margin-left: auto; color: var(--accent-2); font-size: 15px }
 .honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none }
+
+.copy-block, .copy-inline { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 14px 16px; min-width: 0 }
+.copy-inline { background: var(--bg); padding: 12px 14px }
+.copy-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--muted) }
+.copy-btn { min-height: var(--target); padding: 6px 14px; font-size: 14px }
+.copy-block pre, .copy-inline pre { margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(4,5,13,.65); border: 1px solid var(--line); overflow-x: auto; font: 400 13.5px/1.55 var(--mono); color: var(--fg) }
+.badge-embed { margin-top: 26px }
+.badge-body { display: grid; gap: 12px; margin-top: 14px }
+.badge-preview { display: flex; align-items: center; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line) }

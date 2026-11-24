@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const l = await store().create(v.value, { edit_token_hash: hashToken(token), ip_hash: ip })
     const manage = manageUrl(l.id, token)
     const mailed = await sendMail(l.owner_email, `Your Nervix Space listing: ${l.name}`, manageMail(l.name, manage))
-    await refresh('/', '/sitemap.xml')
+    await refresh('/', '/sitemap.xml', '/feed.xml')
     return NextResponse.json(
       { id: l.id, slug: l.slug, status: l.status, page: `/l/${l.slug}`, manage, mailed },
       { status: 201, headers: NO_STORE_HEADERS },

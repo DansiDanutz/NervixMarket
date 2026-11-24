@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import { BadgeEmbed } from '@/components/badge-embed'
 import { FEATURE_USD } from '@/lib/listing'
 import { EMPTY, Field, ListingFields, type Errors, type Values } from './fields'
 import s from './list.module.css'
@@ -87,7 +88,7 @@ export function ListForm() {
     } catch (err) { setFail((err as Error).message) } finally { setBusy(false) }
   }
 
-  if (done) return <Welcome d={done} />
+  if (done) return <Welcome d={done} name={v.name.trim() || done.slug} />
 
   return (
     <main className="wrap page">
@@ -116,8 +117,11 @@ export function ListForm() {
   )
 }
 
-function Welcome({ d }: { d: Done }) {
+function Welcome({ d, name }: { d: Done; name: string }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const origin = (() => {
+    try { return new URL(d.manage).origin } catch { return 'https://nervix.space' }
+  })()
   async function copyLink() {
     try {
       if (!navigator.clipboard) throw new Error('no clipboard')
@@ -145,6 +149,7 @@ function Welcome({ d }: { d: Done }) {
           <Link className="btn ghost" href={`/feature/${d.id}`}>Feature it · {FEATURE_USD} USD</Link>
         </div>
       </div>
+      <BadgeEmbed slug={d.slug} name={name} baseUrl={origin} defaultOpen />
     </main>
   )
 }
