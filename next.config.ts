@@ -45,6 +45,13 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
       },
       {
+        source: '/go/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+      {
         source: '/api/badge/:path*',
         headers: [
           { key: 'Content-Security-Policy', value: "default-src 'none'; style-src 'unsafe-inline'" },

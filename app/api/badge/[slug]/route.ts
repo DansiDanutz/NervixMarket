@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { renderBadgeSvg } from '@/lib/badge'
-import { findLive } from '@/lib/store'
+import { findLive, store } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +15,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   const listing = await findLive(slug)
   if (!listing) {
     return new NextResponse('Not found', { status: 404, headers: { 'cache-control': 'no-store' } })
+  }
+  if (!listing.founding) {
+    await store().recordMetric(listing.id, 'badge_loads').catch(() => {})
   }
   const svg = renderBadgeSvg(listing)
   return new NextResponse(svg, {

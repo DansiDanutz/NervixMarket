@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CATEGORIES, OFFERS, PAY_MODES, isFeatured } from '@/lib/listing'
+import { CATEGORIES, OFFERS, PAY_MODES, isFeatured, isVerified } from '@/lib/listing'
 import { siteUrl } from '@/lib/owner'
-import { findLive } from '@/lib/store'
+import { findLive, store } from '@/lib/store'
 import { Avatar } from '@/components/avatar'
 import { BadgeEmbed } from '@/components/badge-embed'
 import { Report } from './report'
@@ -28,9 +29,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 const contactHref = (c: string) =>
   /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(c) ? `mailto:${c}` : /^https:\/\//.test(c) ? c : /^@[A-Za-z0-9_]{1,30}$/.test(c) ? `https://x.com/${c.slice(1)}` : null
 
+const CRAWLER_UA = /googlebot|bingbot|yandexbot|baiduspider|duckduckbot|slurp|semrushbot|ahrefsbot/i
+
 export default async function ListingPage({ params }: { params: Promise<{ slug: string }> }) {
   const l = await findLive((await params).slug)
   if (!l) notFound()
+  if (!l.founding) {
+    const h = await headers()
+    const isPrefetch =
+      h.get('next-router-prefetch') !== null
+      || h.get('purpose') === 'prefetch'
+      || h.get('sec-purpose') === 'prefetch'
+    const ua = h.get('user-agent') ?? ''
+    if (!isPrefetch && !CRAWLER_UA.test(ua)) {
+      await store().recordMetric(l.id, 'views').catch(() => {})
+    }
+  }
   const contact = l.contact ? contactHref(l.contact) : null
   const mode = PAY_MODES.find((m) => m.id === l.pay_mode)
   const ld = {
@@ -39,6 +53,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
     mainEntityOfPage: `${siteUrl()}/l/${l.slug}`,
   }
   const host = l.website.replace(/^https:\/\//, '').replace(/\/$/, '')
+  const slugEnc = encodeURIComponent(l.slug)
   return (
     <main className={`wrap ${s.page}`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, '\\u003c') }} />
@@ -53,6 +68,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
       <div className="meta">
         {l.founding && <span className="pill founding">Founding member</span>}
         {isFeatured(l) && <span className="pill featured">Featured</span>}
+        {isVerified(l) && <span className="pill verified">Verified site</span>}
         <span className="pill">{CATEGORIES.find((c) => c.id === l.category)?.label}</span>
         <span className={`pill ${l.offer !== 'use' ? 'sell' : ''}`}>{OFFERS.find((o) => o.id === l.offer)?.label}</span>
         {mode && <span className="pill pay">{mode.id === 'subscribe' ? 'Subscription' : 'Buy now'} · NervixPay</span>}
@@ -79,8 +95,8 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
           </dl>
         </div>
         <aside className={s.actions} aria-label="Actions">
-          {mode && <a className="btn" href={l.pay_link} target="_blank" rel="noopener noreferrer nofollow">{mode.button}{l.price ? ` · ${l.price}` : ''}</a>}
-          <a className={`btn ${mode ? 'ghost' : ''}`} href={l.website} target="_blank" rel="noopener noreferrer nofollow ugc">Visit {l.name}</a>
+          {mode && <a className="btn" href={`/go/${slugEnc}?to=pay`} target="_blank" rel="noopener noreferrer nofollow">{mode.button}{l.price ? ` · ${l.price}` : ''}</a>}
+          <a className={`btn ${mode ? 'ghost' : ''}`} href={`/go/${slugEnc}?to=visit`} target="_blank" rel="noopener noreferrer nofollow ugc">Visit {l.name}</a>
           {mode && <p className={s.paynote}>Paid wallet to wallet in USDT or USDC, straight to the owner, verified on-chain by NervixPay. Nervix Space never holds the money; check the project before you pay.</p>}
           <Link className={s.listYours} href="/list">List yours free</Link>
         </aside>

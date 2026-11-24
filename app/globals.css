@@ -39,7 +39,7 @@ a { color: inherit }
 .chips a:hover { color: var(--fg); border-color: var(--line-strong) }
 .chips a.on, .chips a[aria-current] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 600 }
 .chips .sep { width: 1px; background: var(--line); margin: 0 4px }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 14px }
 .card { display: grid; grid-template-rows: auto 1fr auto; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); text-decoration: none; transition: border-color .15s, transform .15s }
 .card:hover { border-color: rgba(167,139,250,.55); transform: translateY(-2px) }
 .card.is-featured { border-color: rgba(139,92,246,.5) }
@@ -53,6 +53,7 @@ a { color: inherit }
 .pill.founding { color: var(--accent-2); border-color: rgba(34,211,238,.4) }
 .pill.sell { color: var(--warn); border-color: rgba(255,181,71,.4) }
 .pill.featured { color: #c4b5fd; border-color: rgba(139,92,246,.6); background: rgba(139,92,246,.12) }
+.pill.verified { color: var(--ok); border-color: rgba(45,226,196,.55); background: rgba(45,226,196,.09) }
 .pill.pay { color: var(--ok); border-color: rgba(45,226,196,.4) }
 .empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: 16px }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 26px; font: 500 15px var(--mono); color: var(--muted) }
@@ -132,3 +133,18 @@ fieldset.paybox a { color: var(--accent-2) }
 .badge-embed { margin-top: 26px }
 .badge-body { display: grid; gap: 12px; margin-top: 14px }
 .badge-preview { display: flex; align-items: center; padding: 12px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line) }
+
+.manage-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px }
+.manage-pills .pill-gap { margin-left: 0 }
+.stats-panel, .verify-box { margin-bottom: 22px }
+.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.panel-head h2 { margin: 0 0 4px; font-family: var(--display); font-size: 20px }
+.panel-head p { margin: 0 }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 16px }
+.stat-card { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); min-width: 0 }
+.stat-label { font-size: 13px; color: var(--muted); font-weight: 600 }
+.stat-num { font-family: var(--display); font-size: 24px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--fg) }
+.stat-sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere }
+.stats-empty { margin: 14px 0 0 }
+.verify-msg { margin: 12px 0 0 }
+.verify-steps { margin-top: 14px }

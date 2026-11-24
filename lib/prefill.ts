@@ -189,7 +189,10 @@ async function readCapped(r: Response): Promise<string> {
   return new TextDecoder().decode(Buffer.concat(chunks).subarray(0, MAX_BYTES))
 }
 
-export async function prefill(raw: string, opts: { fetch?: typeof fetch; resolve?: Resolver } = {}): Promise<Prefill> {
+export async function fetchPublicHtml(
+  raw: string,
+  opts: { fetch?: typeof fetch; resolve?: Resolver } = {},
+): Promise<{ html: string; finalUrl: string }> {
   const f = opts.fetch ?? fetch
   let u: URL
   try { u = new URL(raw.trim()) } catch { throw new PrefillError('Paste a full https:// link.') }
@@ -207,7 +210,7 @@ export async function prefill(raw: string, opts: { fetch?: typeof fetch; resolve
       if (!/html/i.test(r.headers.get('content-type') ?? '')) throw new PrefillError('That link is not a web page.')
       const cl = Number(r.headers.get('content-length') ?? '')
       if (Number.isFinite(cl) && cl > MAX_CONTENT_LENGTH) throw new PrefillError('That page is too large to read automatically.')
-      return parseMeta(await readCapped(r), u.toString())
+      return { html: await readCapped(r), finalUrl: u.toString() }
     }
     throw new PrefillError('Too many redirects.')
   } catch (e) {
@@ -215,4 +218,9 @@ export async function prefill(raw: string, opts: { fetch?: typeof fetch; resolve
     if (e instanceof PrefillError) throw e
     throw new PrefillError('Could not reach that site.')
   } finally { clearTimeout(timer) }
+}
+
+export async function prefill(raw: string, opts: { fetch?: typeof fetch; resolve?: Resolver } = {}): Promise<Prefill> {
+  const { html, finalUrl } = await fetchPublicHtml(raw, opts)
+  return parseMeta(html, finalUrl)
 }

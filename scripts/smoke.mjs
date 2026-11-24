@@ -184,6 +184,11 @@ try {
     const badge = await fetch(`${base}/api/badge/${created.slug}`)
     assert(badge.status === 200 && (await badge.text()).includes('Listed'), 'created listing badge failed')
 
+    const goVisit = await fetch(`${base}/go/${created.slug}?to=visit`, { redirect: 'manual' })
+    assert(goVisit.status === 302 && goVisit.headers.get('location')?.replace(/\/$/, '') === 'https://ci-smoke.example.com', `/go visit redirect failed: ${goVisit.status} ${goVisit.headers.get('location')}`)
+    const goPay = await fetch(`${base}/go/${created.slug}?to=pay`, { redirect: 'manual' })
+    assert(goPay.status === 302 && goPay.headers.get('location') === 'https://nervixpay.live/l/cismoke1', `/go pay redirect failed: ${goPay.status}`)
+
     const sm = await (await fetch(`${base}/sitemap.xml`)).text()
     assert(sm.includes(`/l/${created.slug}`), 'sitemap missing created listing')
 
@@ -194,6 +199,22 @@ try {
     assert(manage.status === 200 && manage.headers.get('referrer-policy') === 'no-referrer', '/manage headers invalid')
 
     const tok = created.manage.split('#')[1]
+    const pubLookup = await (await fetch(`${base}/api/listings/${created.id}`)).json()
+    assert(pubLookup.metrics === undefined, 'public GET /api/listings/[id] leaked metrics')
+    const ownLookup = await (await fetch(`${base}/api/listings/${created.id}`, { headers: { 'x-manage-token': tok } })).json()
+    assert(
+      ownLookup.metrics?.totals?.views >= 1
+      && ownLookup.metrics?.totals?.visit_clicks >= 1
+      && ownLookup.metrics?.totals?.pay_clicks >= 1
+      && ownLookup.metrics?.totals?.badge_loads >= 1,
+      `owner metrics missing expected counts: ${JSON.stringify(ownLookup.metrics)}`,
+    )
+
+    const cronNoAuth = await fetch(`${base}/api/cron/reminders`)
+    assert(cronNoAuth.status === 403, `cron without auth expected 403 got ${cronNoAuth.status}`)
+    const cronOk = await fetch(`${base}/api/cron/reminders`, { headers: { authorization: 'Bearer ci-smoke-admin-token-123456' } })
+    assert(cronOk.status === 200 && (await cronOk.json()).ok === true, 'cron with admin auth failed')
+
     const patched = await fetch(`${base}/api/listings/${created.id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', 'x-manage-token': tok },

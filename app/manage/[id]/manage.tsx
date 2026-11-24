@@ -2,10 +2,27 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { badgeSnippets } from '@/lib/badge'
 import { FEATURE_USD } from '@/lib/listing'
+import type { ListingMetrics } from '@/lib/store'
+import { CopySnippet } from '@/components/copy-snippet'
 import { EMPTY, ListingFields, type Errors, type Values } from '@/app/list/fields'
 
-type State = { status: string; slug: string; name: string; featured: boolean; featured_until: string | null; owner_email: string }
+type State = {
+  status: string
+  slug: string
+  name: string
+  website: string
+  featured: boolean
+  featured_until: string | null
+  verified: boolean
+  verified_at: string | null
+  owner_email: string
+  metrics: ListingMetrics | null
+}
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** The owner's page. The manage token lives in the URL fragment (#…), so it never reaches a server log;
  *  it is sent to the API in a header. */
@@ -19,12 +36,25 @@ export function Manage({ id }: { id: string }) {
   const [deleted, setDeleted] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyNote, setVerifyNote] = useState<{ ok: boolean; text: string } | null>(null)
   const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }))
 
   const load = (j: Record<string, unknown>) => {
     const s = (k: string) => (typeof j[k] === 'string' ? (j[k] as string) : '')
     setV({ ...EMPTY, ...Object.fromEntries(Object.keys(EMPTY).map((k) => [k, s(k)])), pay_mode: s('pay_mode') || 'buy' })
-    setSt({ status: s('status'), slug: s('slug'), name: s('name'), featured: !!j.featured, featured_until: (j.featured_until as string) ?? null, owner_email: s('owner_email') })
+    setSt({
+      status: s('status'),
+      slug: s('slug'),
+      name: s('name'),
+      website: s('website'),
+      featured: !!j.featured,
+      featured_until: (j.featured_until as string) ?? null,
+      verified: !!j.verified,
+      verified_at: (j.verified_at as string) ?? null,
+      owner_email: s('owner_email'),
+      metrics: (j.metrics as ListingMetrics | undefined) ?? null,
+    })
   }
 
   useEffect(() => {
@@ -69,7 +99,7 @@ export function Manage({ id }: { id: string }) {
     e.preventDefault()
     const { owner_email: _, ...fields } = v
     const j = await call('PATCH', fields)
-    if (j) { load(j); setMsg('Saved. Your page is up to date.') }
+    if (j) { load(j); setVerifyNote(null); setMsg('Saved. Your page is up to date.') }
   }
   async function toggle() {
     const j = await call('PATCH', { status: st?.status === 'paused' ? 'active' : 'paused' })
@@ -78,6 +108,32 @@ export function Manage({ id }: { id: string }) {
   async function remove() {
     const j = await call('DELETE')
     if (j) { setSt(null); setMsg(null); setConfirmDelete(false); setDeleted(true); setFail('Your listing was deleted.') }
+  }
+
+  async function verifySite() {
+    setVerifying(true); setVerifyNote(null)
+    try {
+      const r = await fetch(`/api/listings/${id}/verify`, {
+        method: 'POST',
+        headers: { 'x-manage-token': token ?? '' },
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        setVerifyNote({ ok: false, text: j.error ?? `Verification check failed (HTTP ${r.status}).` })
+        return
+      }
+      if (j.verified) {
+        setSt((prev) => prev ? { ...prev, verified: true, verified_at: j.verified_at ?? new Date().toISOString() } : prev)
+        const via = j.method === 'badge' ? 'your Nervix Space badge' : j.method === 'backlink' ? 'a link to your listing' : 'your nervix-verify meta tag'
+        setVerifyNote({ ok: true, text: `Site verified via ${via}. Your Verified badge is now live.` })
+      } else {
+        setVerifyNote({ ok: false, text: j.reason ?? 'Could not verify your site yet. Paste the badge or meta tag on your homepage and try again.' })
+      }
+    } catch {
+      setVerifyNote({ ok: false, text: 'Could not reach the server. Please try again shortly.' })
+    } finally {
+      setVerifying(false)
+    }
   }
 
   if (!st) {
@@ -96,16 +152,34 @@ export function Manage({ id }: { id: string }) {
   }
 
   const live = st.status === 'active'
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://nervix.space'
+  const snippets = badgeSnippets(st.slug, st.name, origin)
+  const metaSnippet = `<meta name="nervix-verify" content="${id}" />`
+  const m = st.metrics
+  const totalActivity = m
+    ? m.totals.views + m.totals.visit_clicks + m.totals.pay_clicks + m.totals.mcp_lookups + m.totals.badge_loads
+    : 0
+  const metricCards = m
+    ? [
+        { label: 'Page views', recent: m.recent.views, total: m.totals.views, hint: 'Humans opening /l/' + st.slug },
+        { label: 'Site clicks', recent: m.recent.visit_clicks, total: m.totals.visit_clicks, hint: 'Clicks on Visit' },
+        { label: 'Pay clicks', recent: m.recent.pay_clicks, total: m.totals.pay_clicks, hint: 'Clicks to NervixPay' },
+        { label: 'AI agent lookups', recent: m.recent.mcp_lookups, total: m.totals.mcp_lookups, hint: 'MCP get_listing calls' },
+        { label: 'Badge loads', recent: m.recent.badge_loads, total: m.totals.badge_loads, hint: 'SVG badge impressions' },
+      ]
+    : []
+
   return (
     <main className="wrap page">
       <div className="eyebrow">Manage your listing</div>
       <h1>{st.name}</h1>
       <div className="box manage-box">
-        <p>
+        <p className="manage-pills">
           <span className={`status ${live ? 'live' : ''}`}>{live ? 'LIVE' : st.status === 'paused' ? 'PAUSED' : 'UNDER REVIEW'}</span>
+          {st.verified && <span className="pill verified pill-gap">Verified site</span>}
           {st.featured && st.featured_until && (
             <span className="pill founding pill-gap">
-              Featured until {new Date(st.featured_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              Featured until {fmtDate(st.featured_until)}
             </span>
           )}
         </p>
@@ -124,6 +198,75 @@ export function Manage({ id }: { id: string }) {
           )}
         </div>
       </div>
+
+      {m && (
+        <section className="box stats-panel" aria-labelledby="reach-heading">
+          <div className="panel-head">
+            <div>
+              <h2 id="reach-heading">Listing reach</h2>
+              <p className="h">Last {m.window_days} days (with all-time total). Aggregated server counts · no cookies or trackers.</p>
+            </div>
+          </div>
+          <div className="stat-grid">
+            {metricCards.map((c) => (
+              <div className="stat-card" key={c.label}>
+                <span className="stat-label">{c.label}</span>
+                <b className="stat-num">{c.recent.toLocaleString('en-US')}</b>
+                <span className="stat-sub">{c.total.toLocaleString('en-US')} all time · {c.hint}</span>
+              </div>
+            ))}
+          </div>
+          {totalActivity === 0 && (
+            <p className="h stats-empty">No traffic recorded yet — embed your badge below or share <code>/l/{st.slug}</code> to start seeing visits and AI agent lookups here.</p>
+          )}
+        </section>
+      )}
+
+      <section className="box verify-box" aria-labelledby="verify-heading">
+        <div className="panel-head">
+          <div>
+            <h2 id="verify-heading">Site verification &amp; badge</h2>
+            {st.verified && st.verified_at ? (
+              <p className="h">
+                Verified on {fmtDate(st.verified_at)}. Shown on your directory card, listing page, SVG badge, and MCP agent responses.
+              </p>
+            ) : (
+              <p className="h">
+                Prove you own <code>{st.website.replace(/^https:\/\//, '').replace(/\/$/, '')}</code> to earn a <b>Verified</b> badge on the directory, SVG badge, and AI agent responses.
+              </p>
+            )}
+          </div>
+          <button type="button" className="btn ghost" onClick={verifySite} disabled={verifying || busy}>
+            {verifying ? 'Checking site…' : st.verified ? 'Re-verify site' : 'Verify my site'}
+          </button>
+        </div>
+
+        {verifyNote && (
+          <p className={verifyNote.ok ? 'note verify-msg' : 'err verify-msg'} role={verifyNote.ok ? 'status' : 'alert'}>
+            {verifyNote.text}
+          </p>
+        )}
+
+        <details className="more verify-steps" open={!st.verified || undefined}>
+          <summary>
+            {st.verified ? 'Your embeddable Verified badge snippets' : 'How to verify (pick either option, then click Verify my site)'}
+          </summary>
+          <div className="badge-body">
+            <div className="badge-preview">
+              {/* eslint-disable-next-line @next/next/no-img-element -- local dynamic SVG badge */}
+              <img
+                src={`/api/badge/${encodeURIComponent(st.slug)}?v=${st.verified ? '1' : '0'}`}
+                alt={`${st.name} on Nervix Space`}
+                height={28}
+              />
+            </div>
+            <CopySnippet label="Option 1: Paste this HTML badge on your homepage" code={snippets.html} inline />
+            <CopySnippet label="Option 2: Or paste this meta tag inside <head>" code={metaSnippet} inline />
+            <CopySnippet label="Markdown (for GitHub README)" code={snippets.markdown} inline />
+          </div>
+        </details>
+      </section>
+
       <form className="f" onSubmit={save} noValidate>
         <label>Website<input name="website" type="url" value={v.website} className={errors.website ? 'bad' : undefined} onChange={(e) => set('website', e.target.value)} />{errors.website && <span className="err">{errors.website}</span>}</label>
         <ListingFields v={v} set={set} errors={errors} withEmail={false} />

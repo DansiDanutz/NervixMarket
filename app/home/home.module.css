@@ -1,6 +1,7 @@
 /* Home: direction C (the product is the hero) in direction A's dark identity. Nothing here animates. */
 .hero { display: grid; grid-template-columns: 1.08fr .92fr; gap: 48px; align-items: center; padding-block: 56px 48px }
-.lead h1 { font: 700 clamp(36px, 5.4vw, 60px)/1.04 var(--display); letter-spacing: -.03em; margin: 22px 0 16px; max-width: 15ch; text-wrap: balance }
+.hero > * { min-width: 0 }
+.lead h1 { font: 700 clamp(32px, 5.4vw, 60px)/1.04 var(--display); letter-spacing: -.03em; margin: 22px 0 16px; max-width: 15ch; text-wrap: balance; overflow-wrap: break-word }
 .intro { font-size: 19px; color: var(--muted); margin: 0 0 28px; max-width: 52ch }
 .aside { color: var(--muted); margin: 0 }
 .aside a { color: var(--accent-2) }
