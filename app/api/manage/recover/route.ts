@@ -46,11 +46,12 @@ export async function POST(req: Request) {
     for (const l of (await store().byEmail(email)).slice(0, 10)) {
       const prevHash = l.edit_token_hash
       const token = newToken()
-      await store().update(l.id, { edit_token_hash: hashToken(token) })
+      const nextHash = hashToken(token)
+      await store().update(l.id, { edit_token_hash: nextHash })
       const mailed = await sendMail(email, `Your Nervix Space listing: ${l.name}`, manageMail(l.name, manageUrl(l.id, token)))
-      // Never lock out an owner if the mail provider fails to deliver the replacement link.
+      // Compare-and-swap rollback: only restore prevHash if no newer recovery already replaced nextHash.
       if (!mailed) {
-        await store().update(l.id, { edit_token_hash: prevHash }).catch((rollbackErr) => {
+        await store().update(l.id, { edit_token_hash: prevHash }, nextHash).catch((rollbackErr) => {
           console.error('recover rollback failed', l.id, rollbackErr)
         })
       }

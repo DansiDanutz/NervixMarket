@@ -17,8 +17,8 @@ export interface Store {
   bySlug(slug: string): Promise<Listing | null>
   /** Live listings matching the query: featured first, then newest. Founding projects are not included. */
   search(q: Query, limit: number, offset: number): Promise<{ items: Listing[]; total: number }>
-  /** Owner edits and status changes. Returns the updated listing. */
-  update(id: string, patch: Partial<ListingPatch> & { status?: Status; edit_token_hash?: string }): Promise<Listing | null>
+  /** Owner edits and status changes. Returns the updated listing, or null when not found / CAS mismatch. */
+  update(id: string, patch: Partial<ListingPatch> & { status?: Status; edit_token_hash?: string }, ifTokenHash?: string): Promise<Listing | null>
   /** Listings created from this IP hash since the given time (the rate limit). */
   recentByIp(ipHash: string, sinceIso: string): Promise<number>
   /** One report per IP per listing; at `threshold` reports a live listing is hidden for review. Returns the count. */
@@ -82,10 +82,11 @@ export class FileStore implements Store {
       .map(({ l }) => l)
     return { items: all.slice(offset, offset + limit), total: all.length }
   }
-  async update(id: string, patch: Partial<Listing>) {
+  async update(id: string, patch: Partial<Listing>, ifTokenHash?: string) {
     const d = await this.load()
     const l = d.listings.find((x) => x.id === id)
     if (!l) return null
+    if (ifTokenHash !== undefined && l.edit_token_hash !== ifTokenHash) return null
     Object.assign(l, patch)
     await this.save(d)
     return l
@@ -166,8 +167,9 @@ export class SupabaseStore implements Store {
     }) as { items: Listing[]; total: number }
     return { items: r?.items ?? [], total: Number(r?.total ?? 0) }
   }
-  async update(id: string, patch: Partial<Listing>) {
-    const rows = await this.rest(`listings?id=eq.${encodeURIComponent(id)}`, {
+  async update(id: string, patch: Partial<Listing>, ifTokenHash?: string) {
+    const cond = ifTokenHash !== undefined ? `&edit_token_hash=eq.${encodeURIComponent(ifTokenHash)}` : ''
+    const rows = await this.rest(`listings?id=eq.${encodeURIComponent(id)}${cond}`, {
       method: 'PATCH', body: JSON.stringify({ ...patch, updated_at: now() }),
     }, 'return=representation') as Listing[]
     return rows[0] ?? null

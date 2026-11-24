@@ -277,6 +277,68 @@ describe('API hardening: body limits, partial PATCH, Featured preservation, reco
     expect(got429).toBe(true)
   })
 
+  it('overlapping recovery failure never overwrites a newer successful recovery token (CAS rollback)', async () => {
+    const email = 'race@example.com'
+    const created = await (
+      await listPOST(
+        new Request('http://x/api/listings', {
+          method: 'POST',
+          body: JSON.stringify({ ...good, owner_email: email }),
+          headers: { 'x-real-ip': '22.4.4.1' },
+        }),
+      )
+    ).json()
+
+    process.env.RESEND_API_KEY = 're_test_key'
+    process.env.MAIL_FROM = 'Nervix Space <hello@nervix.space>'
+
+    let resolveA!: (r: Response) => void
+    let callNum = 0
+    let tokenB = ''
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        callNum += 1
+        if (callNum === 1) {
+          return new Promise<Response>((res) => {
+            resolveA = res
+          })
+        }
+        const body = JSON.parse(String(init?.body ?? '{}'))
+        const m = /#([A-Za-z0-9_-]+)/.exec(String(body.text ?? ''))
+        tokenB = m?.[1] ?? ''
+        return Promise.resolve(new Response('{"id":"ok"}', { status: 200 }))
+      }),
+    )
+
+    const reqA = recoverPOST(
+      new Request('http://x/api/manage/recover', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+        headers: { 'x-real-ip': '22.4.4.2' },
+      }),
+    )
+    // Wait until A has written its hash and entered sendMail
+    await new Promise((r) => setTimeout(r, 20))
+    const reqB = recoverPOST(
+      new Request('http://x/api/manage/recover', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+        headers: { 'x-real-ip': '22.4.4.3' },
+      }),
+    )
+    await reqB
+    // Now A's email fails; CAS rollback must NOT clobber B's valid token!
+    resolveA(new Response('mail error', { status: 500 }))
+    await reqA
+
+    expect(tokenB.length).toBeGreaterThanOrEqual(20)
+    const checkB = await (
+      await oneGET(new Request(`http://x/api/listings/${created.id}`, { headers: { 'x-manage-token': tokenB } }), ctx(created.id))
+    ).json()
+    expect(checkB.owner).toBe(true)
+  })
+
   it('ignores webhook for removed listings and rejects missing orderId', async () => {
     expect(featureProblem(paid({ orderId: '', customerReference: 'lst_abc123' }), config())).toBe('missing order id')
     process.env.FEATURE_DAYS = 'not-a-number'
