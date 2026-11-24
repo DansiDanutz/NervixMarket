@@ -56,8 +56,35 @@ export async function sendMail(to: string, subject: string, text: string, f: typ
   } catch (e) { console.error('mail failed', e); return false }
 }
 
-export const manageMail = (name: string, link: string) =>
-  `Your project "${name}" is listed on Nervix Space.\n\nThis is your private link to edit, pause or delete it. Keep it safe: anyone with it can change your listing.\n\n${link}\n\nWant buyers to pay you directly? Create a payment link on NervixPay (https://nervixpay.live) and paste it in your listing.\n\nNervix Space`
+export const manageMail = (name: string, link: string, genesisNumber?: number | null) =>
+  `Your project "${name}" is listed on Nervix Space${genesisNumber ? ` (Genesis #${genesisNumber} of 200 — free forever)` : ''}.\n\nThis is your private link to edit, pause or delete it. Keep it safe: anyone with it can change your listing.\n\n${link}\n\nWant buyers to pay you directly? Create a payment link on NervixPay (https://nervixpay.live) and paste it in your listing.\n\nNervix Space`
+
+export const pendingListingMail = (name: string, manageLink: string, payLink: string, priceUsd: number) =>
+  `Your project "${name}" is saved on Nervix Space and waiting for activation.\n\nComplete your one-time ${priceUsd} USD listing payment (USDT/USDC via NervixPay) to publish it permanently:\n${payLink}\n\nYour private manage link (keep it safe):\n${manageLink}\n\nNervix Space`
+
+export const listingActivatedMail = (opts: {
+  name: string
+  slug: string
+  orderId: string
+  amount?: string | number
+  token?: string
+  network?: string
+}) => {
+  const base = siteUrl()
+  const paidLine = opts.amount && opts.token
+    ? `Payment: ${opts.amount} ${opts.token}${opts.network ? ` (${opts.network})` : ''} · Order ${opts.orderId}`
+    : `Order: ${opts.orderId}`
+  return [
+    `Your project "${opts.name}" is now live on Nervix Space!`,
+    '',
+    paidLine,
+    `Live listing: ${base}/l/${opts.slug}`,
+    '',
+    'Your listing is published permanently with 0% cut on your sales. You can verify your site or add a NervixPay button anytime from your manage link.',
+    '',
+    'Nervix Space',
+  ].join('\n')
+}
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })

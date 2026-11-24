@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { NO_STORE_HEADERS, readJsonBody } from '@/lib/http'
-import { validate } from '@/lib/listing'
-import { hashToken, ipHash, manageMail, manageUrl, newToken, refresh, sendMail } from '@/lib/owner'
-import { browse, store } from '@/lib/store'
+import { listingUsd, validate } from '@/lib/listing'
+import { listingCheckoutUrl } from '@/lib/nervixpay'
+import { hashToken, ipHash, manageMail, manageUrl, newToken, pendingListingMail, refresh, sendMail, siteUrl } from '@/lib/owner'
+import { browse, genesisStatus, store } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,15 +14,18 @@ const MAX_BODY_BYTES = 32_768
 /** Search live listings (agents can use this too): ?q=&category=&offer=&page= */
 export async function GET(req: Request) {
   const p = new URL(req.url).searchParams
-  const r = await browse(
-    {
-      q: p.get('q')?.slice(0, 100) ?? undefined,
-      category: p.get('category') ?? undefined,
-      offer: p.get('offer') ?? undefined,
-    },
-    Number(p.get('page') ?? 1),
-  )
-  return NextResponse.json({ count: r.total, page: r.page, pages: r.pages, listings: r.items })
+  const [r, genesis] = await Promise.all([
+    browse(
+      {
+        q: p.get('q')?.slice(0, 100) ?? undefined,
+        category: p.get('category') ?? undefined,
+        offer: p.get('offer') ?? undefined,
+      },
+      Number(p.get('page') ?? 1),
+    ),
+    genesisStatus(),
+  ])
+  return NextResponse.json({ count: r.total, page: r.page, pages: r.pages, listings: r.items, genesis })
 }
 
 /** Submit a listing. Free for everyone, live at once. Answers with the owner's private manage link
@@ -51,10 +55,24 @@ export async function POST(req: Request) {
     const token = newToken()
     const l = await store().create(v.value, { edit_token_hash: hashToken(token), ip_hash: ip })
     const manage = manageUrl(l.id, token)
-    const mailed = await sendMail(l.owner_email, `Your Nervix Space listing: ${l.name}`, manageMail(l.name, manage))
-    await refresh('/', '/sitemap.xml', '/feed.xml')
+    const payPath = `/pending/${l.id}`
+    const payFull = `${siteUrl()}${payPath}`
+    const checkout = l.status === 'pending' ? listingCheckoutUrl(l.id, l.owner_email) : null
+    const mailed = l.status === 'pending'
+      ? await sendMail(l.owner_email, `Activate your Nervix Space listing: ${l.name}`, pendingListingMail(l.name, manage, payFull, listingUsd()))
+      : await sendMail(l.owner_email, `Your Nervix Space listing: ${l.name}`, manageMail(l.name, manage, l.genesis_number))
+    if (l.status === 'active') await refresh('/', '/sitemap.xml', '/feed.xml')
     return NextResponse.json(
-      { id: l.id, slug: l.slug, status: l.status, page: `/l/${l.slug}`, manage, mailed },
+      {
+        id: l.id,
+        slug: l.slug,
+        status: l.status,
+        genesis_number: l.genesis_number ?? null,
+        page: `/l/${l.slug}`,
+        manage,
+        ...(l.status === 'pending' ? { pay_to_publish: payPath, checkout_url: checkout, listing_usd: listingUsd() } : {}),
+        mailed,
+      },
       { status: 201, headers: NO_STORE_HEADERS },
     )
   } catch (err) {

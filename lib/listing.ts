@@ -53,6 +53,8 @@ export interface Listing {
   featured_until: string | null
   /** Timestamp when the owner verified site ownership via badge/backlink or meta tag. */
   verified_at?: string | null
+  /** Permanent Genesis 200 cohort number (1..FREE_LISTING_CAP) for early free projects, or null after cap. */
+  genesis_number?: number | null
   status: Status
   created_at: string
   /** Private: the manage link is mailed here. Never shown or returned publicly. */
@@ -173,10 +175,30 @@ export const isLive = (l: Pick<Listing, 'status'>) => l.status === 'active'
 export const isFeatured = (l: Pick<Listing, 'featured_until'>, now = Date.now()) =>
   !!l.featured_until && Date.parse(l.featured_until) > now
 export const isVerified = (l: Pick<Listing, 'verified_at'>) => !!l.verified_at && Number.isFinite(Date.parse(l.verified_at))
+export const isGenesis = (l: Pick<Listing, 'genesis_number' | 'founding'>) =>
+  !l.founding && typeof l.genesis_number === 'number' && Number.isInteger(l.genesis_number) && l.genesis_number >= 1
 
 export const PAGE_SIZE = 36
 /** Price of a Featured spot, in USD (USDT/USDC through NervixPay). */
 export const FEATURE_USD = 10
+/** Default number of Genesis free listings (first 200 projects free forever). */
+export const DEFAULT_FREE_CAP = 200
+/** One-time Standard listing fee in USD once Genesis 200 is full (USDT/USDC through NervixPay). */
+export const DEFAULT_LISTING_USD = 19
+
+export function freeListingCap(): number {
+  const raw = process.env.FREE_LISTING_CAP
+  if (raw === undefined || raw === '') return DEFAULT_FREE_CAP
+  const n = Number(raw)
+  return Number.isInteger(n) && n >= 0 && n <= 100_000 ? n : DEFAULT_FREE_CAP
+}
+
+export function listingUsd(): number {
+  const raw = process.env.LISTING_USD
+  if (raw === undefined || raw === '') return DEFAULT_LISTING_USD
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 1 && n <= 10_000 ? Math.round(n) : DEFAULT_LISTING_USD
+}
 
 export interface Query { q?: string; category?: string; offer?: string }
 

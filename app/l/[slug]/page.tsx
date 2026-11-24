@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CATEGORIES, OFFERS, PAY_MODES, isFeatured, isVerified } from '@/lib/listing'
+import { CATEGORIES, OFFERS, PAY_MODES, isFeatured, isGenesis, isVerified } from '@/lib/listing'
 import { siteUrl } from '@/lib/owner'
 import { findLive, store } from '@/lib/store'
 import { Avatar } from '@/components/avatar'
@@ -69,6 +69,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
         {l.founding && <span className="pill founding">Founding member</span>}
         {isFeatured(l) && <span className="pill featured">Featured</span>}
         {isVerified(l) && <span className="pill verified">Verified site</span>}
+        {isGenesis(l) && <span className="pill genesis">Genesis #{l.genesis_number}</span>}
         <span className="pill">{CATEGORIES.find((c) => c.id === l.category)?.label}</span>
         <span className={`pill ${l.offer !== 'use' ? 'sell' : ''}`}>{OFFERS.find((o) => o.id === l.offer)?.label}</span>
         {mode && <span className="pill pay">{mode.id === 'subscribe' ? 'Subscription' : 'Buy now'} · NervixPay</span>}

@@ -22,7 +22,7 @@ a { color: inherit }
 .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 20px }
 .eyebrow { font: 600 13px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-2) }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--target); border: 0; cursor: pointer;
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; text-align: center; min-height: var(--target); border: 0; cursor: pointer;
   text-decoration: none; font: 600 16px var(--body); padding: 10px 20px; border-radius: 12px; color: var(--accent-ink);
   background: linear-gradient(135deg, #c4b5fd, var(--accent)) }
 .btn:hover { filter: brightness(1.06) }
@@ -54,6 +54,7 @@ a { color: inherit }
 .pill.sell { color: var(--warn); border-color: rgba(255,181,71,.4) }
 .pill.featured { color: #c4b5fd; border-color: rgba(139,92,246,.6); background: rgba(139,92,246,.12) }
 .pill.verified { color: var(--ok); border-color: rgba(45,226,196,.55); background: rgba(45,226,196,.09) }
+.pill.genesis { color: var(--warn); border-color: rgba(255,181,71,.5); background: rgba(255,181,71,.09) }
 .pill.pay { color: var(--ok); border-color: rgba(45,226,196,.4) }
 .empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: 16px }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 26px; font: 500 15px var(--mono); color: var(--muted) }
@@ -69,15 +70,16 @@ a { color: inherit }
 .steps span { color: var(--muted); font-size: 15px }
 .steps i { font: 600 13px var(--mono); color: var(--accent-2); font-style: normal; display: block; margin-bottom: 8px }
 form.f { display: grid; gap: 18px }
-.f label { display: grid; gap: 6px; font-size: 15px; font-weight: 600 }
+.f > *, fieldset.paybox { min-width: 0 }
+.f label { display: grid; gap: 6px; font-size: 15px; font-weight: 600; min-width: 0 }
 .f label span.h, .h { font-weight: 400; color: var(--muted); font-size: 14px }
-.f input, .f textarea, .f select, .urlrow input { font: inherit; font-weight: 400; color: var(--fg); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 12px; min-height: var(--target) }
+.f input, .f textarea, .f select, .urlrow input { max-width: 100%; min-width: 0; font: inherit; font-weight: 400; color: var(--fg); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 12px; min-height: var(--target) }
 .f textarea { min-height: 130px; resize: vertical }
 .f .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
 .f .err { color: var(--danger); font-weight: 400; font-size: 14px }
 .f .bad { border-color: var(--danger) }
-.urlrow { display: flex; gap: 8px }
-.urlrow input { flex: 1; min-width: 0 }
+.urlrow { display: flex; flex-wrap: wrap; gap: 8px }
+.urlrow input { flex: 1 1 160px; min-width: 0 }
 .note { margin: -6px 0 0; color: var(--accent-2); font-size: 15px }
 .payline { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 16px; border: 1px solid rgba(167,139,250,.4); border-radius: var(--radius); background: rgba(139,92,246,.08) }
 .payline b { font-family: var(--display); font-size: 20px }
@@ -148,3 +150,15 @@ fieldset.paybox a { color: var(--accent-2) }
 .stats-empty { margin: 14px 0 0 }
 .verify-msg { margin: 12px 0 0 }
 .verify-steps { margin-top: 14px }
+
+.genesis-wrap { margin-bottom: 12px }
+.genesis-list-wrap { margin: 0 0 22px }
+.genesis-bar { display: grid; gap: 10px; padding: 16px 18px; border-radius: 16px; border: 1px solid rgba(255,181,71,.32); background: linear-gradient(135deg, rgba(255,181,71,.07), rgba(139,92,246,.07) 55%, var(--panel)) }
+.genesis-top { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap }
+.genesis-copy { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 15px }
+.genesis-copy strong { font-family: var(--display); font-size: 17px; color: var(--fg) }
+.genesis-cta { display: inline-flex; align-items: center; min-height: var(--target); font-weight: 600; color: var(--accent-2); text-decoration: none; white-space: nowrap }
+.genesis-cta:hover { text-decoration: underline }
+.genesis-track { width: 100%; height: 8px; border-radius: 999px; background: rgba(190,200,255,.12); overflow: hidden }
+.genesis-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--warn), var(--accent)) }
+.genesis-sub { margin: 0; font-size: 14px; color: var(--muted) }

@@ -1,13 +1,17 @@
 import type { Metadata } from 'next'
+import { genesisStatus } from '@/lib/store'
 import { ListForm } from './form'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'List your project · Nervix Space',
-  description: 'List your AI project on Nervix Space for free in 30 seconds. Sell it or take subscriptions with NervixPay.',
+  description: 'First 200 AI projects list free forever on Nervix Space with a permanent Genesis 200 badge. Sell or take subscriptions with NervixPay.',
   alternates: { canonical: '/list' },
-  openGraph: { title: 'List your project free · Nervix Space', description: 'Paste your link and we fill in the name, description and logo. Free, live at once.', url: '/list', siteName: 'Nervix Space' },
+  openGraph: { title: 'List your project · Nervix Space', description: 'First 200 projects list free forever. Paste your link and publish in 30 seconds.', url: '/list', siteName: 'Nervix Space' },
 }
 
-export default function ListPage() {
-  return <ListForm />
+export default async function ListPage() {
+  const genesis = await genesisStatus()
+  return <ListForm genesis={genesis} />
 }
