@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start -p 3300",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "next": "^16.4.6",
