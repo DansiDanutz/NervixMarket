@@ -51,6 +51,8 @@ export interface Listing {
   pay_mode: PayMode | ''
   /** Featured (paid boost) until this date; null when not featured. */
   featured_until: string | null
+  /** Timestamp when the owner verified site ownership via badge/backlink or meta tag. */
+  verified_at?: string | null
   status: Status
   created_at: string
   /** Private: the manage link is mailed here. Never shown or returned publicly. */
@@ -61,14 +63,16 @@ export interface Listing {
   ip_hash: string
   /** Private: NervixPay order ids already counted for Featured (webhook retries are no-ops). */
   orders: string[]
+  /** Private: featured_until timestamp for which an expiry reminder email was already sent. */
+  feature_reminder_for?: string | null
   /** Legacy (old paid model); unused. */
   paid_until?: string | null
   /** DansLab's own projects, shown first and kept in code. */
   founding?: boolean
 }
 
-const PRIVATE = ['owner_email', 'edit_token_hash', 'ip_hash', 'orders', 'paid_until', 'reports', 'search'] as const
-export type PublicListing = Omit<Listing, 'owner_email' | 'edit_token_hash' | 'ip_hash' | 'orders' | 'paid_until'>
+const PRIVATE = ['owner_email', 'edit_token_hash', 'ip_hash', 'orders', 'paid_until', 'reports', 'search', 'feature_reminder_for'] as const
+export type PublicListing = Omit<Listing, 'owner_email' | 'edit_token_hash' | 'ip_hash' | 'orders' | 'paid_until' | 'feature_reminder_for'>
 
 export const toPublic = (l: Listing): PublicListing => {
   const out = { ...l } as Record<string, unknown>
@@ -168,6 +172,7 @@ export function validate(raw: Raw, opts: { partial?: boolean } = {}):
 export const isLive = (l: Pick<Listing, 'status'>) => l.status === 'active'
 export const isFeatured = (l: Pick<Listing, 'featured_until'>, now = Date.now()) =>
   !!l.featured_until && Date.parse(l.featured_until) > now
+export const isVerified = (l: Pick<Listing, 'verified_at'>) => !!l.verified_at && Number.isFinite(Date.parse(l.verified_at))
 
 export const PAGE_SIZE = 36
 /** Price of a Featured spot, in USD (USDT/USDC through NervixPay). */

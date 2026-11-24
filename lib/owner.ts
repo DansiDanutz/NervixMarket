@@ -30,6 +30,16 @@ export function isAdmin(req: Request): boolean {
   return timingSafeEqual(a, b)
 }
 
+/** Cron endpoints accept `Authorization: Bearer <CRON_SECRET>` (Vercel Cron) or `<ADMIN_TOKEN>`. Fail-closed when unset. */
+export function isCronAuthorized(req: Request): boolean {
+  if (isAdmin(req)) return true
+  const want = process.env.CRON_SECRET
+  const got = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? ''
+  if (!want || want.length < 16) return false
+  const a = Buffer.from(hashToken(got)), b = Buffer.from(hashToken(want))
+  return timingSafeEqual(a, b)
+}
+
 /** Sends mail through Resend when RESEND_API_KEY and MAIL_FROM are set; otherwise does nothing.
  *  Returns whether a mail was sent. Never throws. */
 export async function sendMail(to: string, subject: string, text: string, f: typeof fetch = fetch): Promise<boolean> {
@@ -48,6 +58,51 @@ export async function sendMail(to: string, subject: string, text: string, f: typ
 
 export const manageMail = (name: string, link: string) =>
   `Your project "${name}" is listed on Nervix Space.\n\nThis is your private link to edit, pause or delete it. Keep it safe: anyone with it can change your listing.\n\n${link}\n\nWant buyers to pay you directly? Create a payment link on NervixPay (https://nervixpay.live) and paste it in your listing.\n\nNervix Space`
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+export const featuredMail = (opts: {
+  name: string
+  slug: string
+  id: string
+  untilIso: string
+  orderId: string
+  amount?: string | number
+  token?: string
+  network?: string
+}) => {
+  const base = siteUrl()
+  const paidLine = opts.amount && opts.token
+    ? `Payment: ${opts.amount} ${opts.token}${opts.network ? ` (${opts.network})` : ''} · Order ${opts.orderId}`
+    : `Order: ${opts.orderId}`
+  return [
+    `Your project "${opts.name}" is now Featured on Nervix Space.`,
+    '',
+    `Featured until: ${fmtDate(opts.untilIso)} (UTC)`,
+    paidLine,
+    '',
+    `Live listing: ${base}/l/${opts.slug}`,
+    `Extend anytime: ${base}/feature/${opts.id}`,
+    '',
+    'Thank you for building in Nervix Space.',
+    'Nervix Space',
+  ].join('\n')
+}
+
+export const featureExpiringMail = (opts: { name: string; slug: string; id: string; untilIso: string }) => {
+  const base = siteUrl()
+  return [
+    `Your Featured spot for "${opts.name}" on Nervix Space ends on ${fmtDate(opts.untilIso)} (UTC).`,
+    '',
+    'Your listing stays live for free after that. If you want to keep pinned placement at the top of the directory and your Featured badge, you can extend for another 30 days here:',
+    `${base}/feature/${opts.id}`,
+    '',
+    `Live listing: ${base}/l/${opts.slug}`,
+    '',
+    'Nervix Space',
+  ].join('\n')
+}
 
 /** Refresh cached pages after a change; a no-op outside a Next.js request (tests). */
 export async function refresh(...paths: string[]) {

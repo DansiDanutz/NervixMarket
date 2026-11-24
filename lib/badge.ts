@@ -1,4 +1,4 @@
-import { isFeatured, type PublicListing } from './listing'
+import { isFeatured, isVerified, type PublicListing } from './listing'
 import { escapeXml } from './xml'
 
 export interface BadgeSnippets {
@@ -26,14 +26,16 @@ export function badgeSnippets(slug: string, name: string, baseUrl: string): Badg
 
 /** Crisp, zero-dependency SVG badge matching Nervix Space's Live Network dark palette. */
 export function renderBadgeSvg(
-  listing: Pick<PublicListing, 'name' | 'founding' | 'featured_until'>,
+  listing: Pick<PublicListing, 'name' | 'founding' | 'featured_until' | 'verified_at'>,
   now = Date.now(),
 ): string {
   const status = listing.founding
     ? { label: 'Founding', accent: '#22d3ee', bg: '#0c2430' }
     : isFeatured(listing, now)
       ? { label: 'Featured', accent: '#c4b5fd', bg: '#1e163b' }
-      : { label: 'Listed', accent: '#2de2c4', bg: '#0d2626' }
+      : isVerified(listing)
+        ? { label: 'Verified', accent: '#2de2c4', bg: '#0b2b27' }
+        : { label: 'Listed', accent: '#2de2c4', bg: '#0d2626' }
 
   const leftText = 'Nervix Space'
   const rightText = status.label

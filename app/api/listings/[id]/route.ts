@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { NO_STORE_HEADERS, readJsonBody } from '@/lib/http'
-import { EDITABLE, isFeatured, isLive, toPublic, validate, type Listing, type ListingPatch } from '@/lib/listing'
+import { EDITABLE, isFeatured, isLive, isVerified, toPublic, validate, type Listing, type ListingPatch } from '@/lib/listing'
 import { refresh, tokenMatches } from '@/lib/owner'
-import { store } from '@/lib/store'
+import { EMPTY_METRICS, store } from '@/lib/store'
+import { isSameSiteHost } from '@/lib/verify'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,8 +23,15 @@ export async function GET(req: Request, { params }: Ctx) {
     if (!l || l.status === 'removed') return notFound()
     const owner = tokenMatches(req.headers.get('x-manage-token'), l.edit_token_hash)
     if (!owner && l.status === 'hidden') return notFound()
+    const metrics = owner ? await store().getMetrics(id, 30).catch(() => EMPTY_METRICS(30)) : undefined
     return NextResponse.json(
-      { ...toPublic(l), live: isLive(l), featured: isFeatured(l), ...(owner ? { owner_email: l.owner_email, owner: true } : {}) },
+      {
+        ...toPublic(l),
+        live: isLive(l),
+        featured: isFeatured(l),
+        verified: isVerified(l),
+        ...(owner ? { owner_email: l.owner_email, owner: true, metrics } : {}),
+      },
       { headers: NO_STORE_HEADERS },
     )
   } catch (err) {
@@ -58,11 +66,15 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const v = validate(toValidate, { partial: true })
     if (!v.ok) return NextResponse.json({ errors: v.errors }, { status: 422, headers: NO_STORE_HEADERS })
 
-    const patch: Partial<ListingPatch> & { status?: Listing['status'] } = {}
+    const patch: Partial<ListingPatch> & { status?: Listing['status']; verified_at?: string | null } = {}
     for (const k of EDITABLE) {
       if (fields[k] !== undefined || (k === 'pay_mode' && fields.pay_link !== undefined)) {
         (patch as Record<string, string>)[k] = v.value[k]
       }
+    }
+    // Switching to a different website host clears site verification so the Verified badge cannot be spoofed.
+    if (patch.website && !isSameSiteHost(patch.website, l.website) && l.verified_at) {
+      patch.verified_at = null
     }
 
     if (raw.status !== undefined) {
@@ -79,8 +91,17 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const updated = await store().update(id, patch)
     if (!updated) return notFound()
     await refresh('/', `/l/${l.slug}`, '/sitemap.xml', '/feed.xml')
+    const metrics = await store().getMetrics(id, 30).catch(() => EMPTY_METRICS(30))
     return NextResponse.json(
-      { ...toPublic(updated), live: isLive(updated), featured: isFeatured(updated), owner: true, owner_email: updated.owner_email },
+      {
+        ...toPublic(updated),
+        live: isLive(updated),
+        featured: isFeatured(updated),
+        verified: isVerified(updated),
+        owner: true,
+        owner_email: updated.owner_email,
+        metrics,
+      },
       { headers: NO_STORE_HEADERS },
     )
   } catch (err) {

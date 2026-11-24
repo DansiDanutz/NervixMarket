@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { NO_STORE_HEADERS, readTextBody } from '@/lib/http'
 import { config, featureProblem, verifySignature, type PaidEvent } from '@/lib/nervixpay'
-import { refresh } from '@/lib/owner'
+import { featuredMail, refresh, sendMail } from '@/lib/owner'
 import { store } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
@@ -50,8 +50,22 @@ export async function POST(req: Request) {
       token: e.currencyToken, network: e.network, amount: e.amountReceived, tx: e.transactionId, paidAt: e.paidAt,
     }, c.featureDays)
     if (!until) return NextResponse.json({ ok: true, duplicate: true }, { headers: NO_STORE_HEADERS })
+    const mailed = await sendMail(
+      l.owner_email,
+      `Your Nervix Space Featured spot is live: ${l.name}`,
+      featuredMail({
+        name: l.name,
+        slug: l.slug,
+        id: l.id,
+        untilIso: until,
+        orderId: e.orderId,
+        amount: e.amountReceived,
+        token: e.currencyToken,
+        network: e.network,
+      }),
+    )
     await refresh('/', `/l/${l.slug}`)
-    return NextResponse.json({ ok: true, listing: l.slug, featured_until: until }, { headers: NO_STORE_HEADERS })
+    return NextResponse.json({ ok: true, listing: l.slug, featured_until: until, mailed }, { headers: NO_STORE_HEADERS })
   } catch (err) {
     console.error('NervixPay webhook settlement failed', e.orderId, err)
     return NextResponse.json({ error: 'settlement temporarily unavailable' }, { status: 503, headers: NO_STORE_HEADERS })

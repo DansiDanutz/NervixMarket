@@ -1,4 +1,4 @@
-import { CATEGORIES, FEATURE_USD, OFFERS, isFeatured, toPublic, validate } from './listing'
+import { CATEGORIES, FEATURE_USD, OFFERS, isFeatured, isVerified, toPublic, validate } from './listing'
 import { hashToken, ipHash, manageMail, manageUrl, newToken, refresh, sendMail, siteUrl } from './owner'
 import { PrefillError, prefill } from './prefill'
 import { RateLimiter } from './rate-limit'
@@ -178,6 +178,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
         url: `${base}/l/${l.slug}`,
         badge_url: `${base}/api/badge/${l.slug}`,
         featured: isFeatured(l),
+        verified: isVerified(l),
       })),
     })
   }
@@ -187,11 +188,15 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
     if (!slug || slug.length > 80) return errResult('Provide a valid listing slug.')
     const l = await findLive(slug)
     if (!l) return errResult(`No live listing found for slug "${slug}".`)
+    if (!l.founding) {
+      await store().recordMetric(l.id, 'mcp_lookups').catch(() => {})
+    }
     return okResult({
       ...toPublic(l),
       url: `${base}/l/${l.slug}`,
       badge_url: `${base}/api/badge/${l.slug}`,
       featured: isFeatured(l),
+      verified: isVerified(l),
     })
   }
 

@@ -8,6 +8,23 @@ import {
   type Listing, type ListingInput, type ListingPatch, type PublicListing, type Query, type Status,
 } from './listing'
 
+export type MetricKind = 'views' | 'visit_clicks' | 'pay_clicks' | 'mcp_lookups' | 'badge_loads'
+export interface MetricTotals {
+  views: number
+  visit_clicks: number
+  pay_clicks: number
+  mcp_lookups: number
+  badge_loads: number
+}
+export interface ListingMetrics {
+  window_days: number
+  totals: MetricTotals
+  recent: MetricTotals
+}
+
+export const EMPTY_TOTALS = (): MetricTotals => ({ views: 0, visit_clicks: 0, pay_clicks: 0, mcp_lookups: 0, badge_loads: 0 })
+export const EMPTY_METRICS = (days = 30): ListingMetrics => ({ window_days: days, totals: EMPTY_TOTALS(), recent: EMPTY_TOTALS() })
+
 /** Where listings live. Production: Supabase (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY, schema in
  *  supabase/schema.sql), reached server-side only. Without it: a JSON file under .data/ (local dev). */
 export interface Store {
@@ -18,7 +35,16 @@ export interface Store {
   /** Live listings matching the query: featured first, then newest. Founding projects are not included. */
   search(q: Query, limit: number, offset: number): Promise<{ items: Listing[]; total: number }>
   /** Owner edits and status changes. Returns the updated listing, or null when not found / CAS mismatch. */
-  update(id: string, patch: Partial<ListingPatch> & { status?: Status; edit_token_hash?: string }, ifTokenHash?: string): Promise<Listing | null>
+  update(
+    id: string,
+    patch: Partial<ListingPatch> & {
+      status?: Status
+      edit_token_hash?: string
+      verified_at?: string | null
+      feature_reminder_for?: string | null
+    },
+    ifTokenHash?: string,
+  ): Promise<Listing | null>
   /** Listings created from this IP hash since the given time (the rate limit). */
   recentByIp(ipHash: string, sinceIso: string): Promise<number>
   /** One report per IP per listing; at `threshold` reports a live listing is hidden for review. Returns the count. */
@@ -27,6 +53,12 @@ export interface Store {
   settleFeature(orderId: string, listingId: string, detail: Record<string, unknown>, days: number): Promise<string | null>
   /** The owner's listings (to re-send lost manage links). */
   byEmail(email: string): Promise<Listing[]>
+  /** Increment a privacy-safe daily counter for a DB listing. No-op for unknown/removed listings. */
+  recordMetric(listingId: string, kind: MetricKind): Promise<void>
+  /** Aggregated all-time + last-N-days counters for a listing (owner manage dashboard). */
+  getMetrics(listingId: string, days?: number): Promise<ListingMetrics>
+  /** Active listings whose Featured boost ends between `fromIso` and `toIso` and have not been reminded for that cycle. */
+  expiringFeatured(fromIso: string, toIso: string): Promise<Listing[]>
 }
 
 export const newId = () => `lst_${randomBytes(9).toString('base64url')}`
@@ -45,13 +77,20 @@ function fresh(input: ListingInput, meta: { edit_token_hash: string; ip_hash: st
   }
 }
 
-type FileData = { listings: Listing[]; payments: Record<string, unknown>; reports: Record<string, string[]> }
+type FileData = {
+  listings: Listing[]
+  payments: Record<string, unknown>
+  reports: Record<string, string[]>
+  metrics: Record<string, Record<string, Partial<MetricTotals>>>
+}
+
+const utcDay = (d = new Date()) => d.toISOString().slice(0, 10)
 
 export class FileStore implements Store {
   kind = 'file' as const
   constructor(private file = path.join(process.cwd(), '.data', 'listings.json')) {}
   private async load(): Promise<FileData> {
-    try { return { payments: {}, reports: {}, ...JSON.parse(await fs.readFile(this.file, 'utf8')) } } catch { return { listings: [], payments: {}, reports: {} } }
+    try { return { payments: {}, reports: {}, metrics: {}, ...JSON.parse(await fs.readFile(this.file, 'utf8')) } } catch { return { listings: [], payments: {}, reports: {}, metrics: {} } }
   }
   private async save(d: FileData) {
     await fs.mkdir(path.dirname(this.file), { recursive: true })
@@ -121,6 +160,42 @@ export class FileStore implements Store {
   }
   async byEmail(email: string) {
     return (await this.load()).listings.filter((l) => l.owner_email === email && l.status !== 'removed')
+  }
+  async recordMetric(listingId: string, kind: MetricKind) {
+    const d = await this.load()
+    const l = d.listings.find((x) => x.id === listingId && x.status !== 'removed')
+    if (!l) return
+    const day = utcDay()
+    const byDay = (d.metrics[listingId] ??= {})
+    const row = (byDay[day] ??= {})
+    row[kind] = (row[kind] ?? 0) + 1
+    await this.save(d)
+  }
+  async getMetrics(listingId: string, days = 30): Promise<ListingMetrics> {
+    const d = await this.load()
+    const byDay = d.metrics[listingId] ?? {}
+    const windowDays = Math.min(365, Math.max(1, Math.trunc(days)))
+    const since = new Date(Date.now() - (windowDays - 1) * 86_400_000).toISOString().slice(0, 10)
+    const totals = EMPTY_TOTALS()
+    const recent = EMPTY_TOTALS()
+    const kinds: MetricKind[] = ['views', 'visit_clicks', 'pay_clicks', 'mcp_lookups', 'badge_loads']
+    for (const [day, row] of Object.entries(byDay)) {
+      for (const k of kinds) {
+        const v = Number(row[k] ?? 0)
+        totals[k] += v
+        if (day >= since) recent[k] += v
+      }
+    }
+    return { window_days: windowDays, totals, recent }
+  }
+  async expiringFeatured(fromIso: string, toIso: string) {
+    const fromMs = Date.parse(fromIso)
+    const toMs = Date.parse(toIso)
+    return (await this.load()).listings.filter((l) => {
+      if (l.status !== 'active' || !l.featured_until) return false
+      const untilMs = Date.parse(l.featured_until)
+      return untilMs > fromMs && untilMs <= toMs && l.feature_reminder_for !== l.featured_until
+    })
   }
 }
 
@@ -193,6 +268,40 @@ export class SupabaseStore implements Store {
   }
   async byEmail(email: string) {
     return await this.rest(`listings?select=*&owner_email=eq.${encodeURIComponent(email)}&status=neq.removed&limit=20`) as Listing[]
+  }
+  async recordMetric(listingId: string, kind: MetricKind) {
+    await this.rest('rpc/record_listing_metric', {
+      method: 'POST', body: JSON.stringify({ p_listing_id: listingId, p_kind: kind }),
+    })
+  }
+  async getMetrics(listingId: string, days = 30): Promise<ListingMetrics> {
+    const r = await this.rest('rpc/get_listing_metrics', {
+      method: 'POST', body: JSON.stringify({ p_listing_id: listingId, p_days: days }),
+    }) as ListingMetrics | null
+    if (!r || !r.totals || !r.recent) return EMPTY_METRICS(days)
+    return {
+      window_days: Number(r.window_days ?? days),
+      totals: {
+        views: Number(r.totals.views ?? 0),
+        visit_clicks: Number(r.totals.visit_clicks ?? 0),
+        pay_clicks: Number(r.totals.pay_clicks ?? 0),
+        mcp_lookups: Number(r.totals.mcp_lookups ?? 0),
+        badge_loads: Number(r.totals.badge_loads ?? 0),
+      },
+      recent: {
+        views: Number(r.recent.views ?? 0),
+        visit_clicks: Number(r.recent.visit_clicks ?? 0),
+        pay_clicks: Number(r.recent.pay_clicks ?? 0),
+        mcp_lookups: Number(r.recent.mcp_lookups ?? 0),
+        badge_loads: Number(r.recent.badge_loads ?? 0),
+      },
+    }
+  }
+  async expiringFeatured(fromIso: string, toIso: string) {
+    const rows = await this.rest(
+      `listings?select=*&status=eq.active&featured_until=gt.${encodeURIComponent(fromIso)}&featured_until=lte.${encodeURIComponent(toIso)}&limit=100`,
+    ) as Listing[]
+    return rows.filter((l) => l.featured_until && l.feature_reminder_for !== l.featured_until)
   }
 }
 
