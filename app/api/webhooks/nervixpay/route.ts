@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { NO_STORE_HEADERS, readTextBody } from '@/lib/http'
-import { config, featureProblem, verifySignature, type PaidEvent } from '@/lib/nervixpay'
-import { featuredMail, refresh, sendMail } from '@/lib/owner'
+import { config, featureProblem, listingProblem, verifySignature, type PaidEvent } from '@/lib/nervixpay'
+import { featuredMail, listingActivatedMail, refresh, sendMail } from '@/lib/owner'
 import { store } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
@@ -9,9 +9,11 @@ export const runtime = 'nodejs'
 
 const MAX_WEBHOOK_BYTES = 65_536
 
-/** NervixPay's signed `payment.paid` event. A verified 10 USD USDT/USDC payment on the Featured link,
- *  with a listing id as its reference, features that listing for FEATURE_DAYS.
- *  Idempotent by order id: retries answer 200 and change nothing. */
+/** NervixPay's signed `payment.paid` webhook.
+ *  Handles both:
+ *  1. Featured boost link (NERVIXPAY_LINK_ID, 10 USD -> extends featured_until by FEATURE_DAYS)
+ *  2. Standard Listing activation link (#201+, NERVIXPAY_LISTING_LINK_ID, 19 USD -> activates pending listing)
+ *  Both are idempotent by orderId: retries answer 200 and change nothing. */
 export async function POST(req: Request) {
   if (process.env.VERCEL && store().kind === 'file') {
     return NextResponse.json({ error: 'database not configured' }, { status: 503, headers: NO_STORE_HEADERS })
@@ -29,16 +31,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'bad body' }, { status: 400, headers: NO_STORE_HEADERS })
   }
   const e = parsed as PaidEvent
-  const problem = featureProblem(e, c)
+
+  const isListingLink = Boolean(c.listingLinkId && e.paymentLinkId === c.listingLinkId)
+  const problem = isListingLink ? listingProblem(e, c) : featureProblem(e, c)
   if (problem) {
     if (e.event === 'payment.paid') console.warn('NervixPay payment not applied', e.orderId, problem)
     return NextResponse.json({ ignored: problem }, { headers: NO_STORE_HEADERS }) // 2xx: nothing to retry
   }
+
   try {
     const s = store()
     const l = await s.get(e.customerReference!)
     if (!l) {
-      // paid, but for no listing we know: keep a trace so it can be applied by hand
       console.error('NervixPay payment for unknown listing', e.orderId, e.customerReference, e.amountReceived, e.currencyToken)
       return NextResponse.json({ ignored: 'unknown listing' }, { headers: NO_STORE_HEADERS })
     }
@@ -46,9 +50,35 @@ export async function POST(req: Request) {
       console.error('NervixPay payment for removed listing', e.orderId, l.id, e.amountReceived, e.currencyToken)
       return NextResponse.json({ ignored: 'removed listing' }, { headers: NO_STORE_HEADERS })
     }
-    const until = await s.settleFeature(e.orderId, l.id, {
-      token: e.currencyToken, network: e.network, amount: e.amountReceived, tx: e.transactionId, paidAt: e.paidAt,
-    }, c.featureDays)
+
+    const detail = {
+      token: e.currencyToken,
+      network: e.network,
+      amount: e.amountReceived,
+      tx: e.transactionId,
+      paidAt: e.paidAt,
+    }
+
+    if (isListingLink) {
+      const nextStatus = await s.settleListing(e.orderId, l.id, detail)
+      if (!nextStatus) return NextResponse.json({ ok: true, duplicate: true }, { headers: NO_STORE_HEADERS })
+      const mailed = await sendMail(
+        l.owner_email,
+        `Your Nervix Space listing is live: ${l.name}`,
+        listingActivatedMail({
+          name: l.name,
+          slug: l.slug,
+          orderId: e.orderId,
+          amount: e.amountReceived,
+          token: e.currencyToken,
+          network: e.network,
+        }),
+      )
+      await refresh('/', `/l/${l.slug}`, '/sitemap.xml', '/feed.xml')
+      return NextResponse.json({ ok: true, kind: 'listing', listing: l.slug, status: nextStatus, mailed }, { headers: NO_STORE_HEADERS })
+    }
+
+    const until = await s.settleFeature(e.orderId, l.id, detail, c.featureDays)
     if (!until) return NextResponse.json({ ok: true, duplicate: true }, { headers: NO_STORE_HEADERS })
     const mailed = await sendMail(
       l.owner_email,

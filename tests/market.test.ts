@@ -290,9 +290,10 @@ describe('supabase', () => {
     const f = (async (u: string, init: RequestInit) => {
       calls.push({ url: u, body: init.body as string })
       if (u.includes('rpc/search_listings')) return new Response('{"items":[{"slug":"a"}],"total":7}')
-      if (u.endsWith('/listings') && init.method === 'POST') {
+      if (u.includes('rpc/create_market_listing') && init.method === 'POST') {
         inserts++
-        return inserts === 1 ? new Response('{"code":"23505"}', { status: 409 }) : new Response(init.body as string ? `[${init.body}]` : '[]')
+        const parsed = JSON.parse(init.body as string) as { p_row: Record<string, unknown> }
+        return inserts === 1 ? new Response('{"code":"23505"}', { status: 409 }) : new Response(JSON.stringify(parsed.p_row))
       }
       return new Response('[]')
     }) as unknown as typeof fetch

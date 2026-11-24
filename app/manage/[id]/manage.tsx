@@ -17,6 +17,7 @@ type State = {
   featured_until: string | null
   verified: boolean
   verified_at: string | null
+  genesis_number: number | null
   owner_email: string
   metrics: ListingMetrics | null
 }
@@ -52,6 +53,7 @@ export function Manage({ id }: { id: string }) {
       featured_until: (j.featured_until as string) ?? null,
       verified: !!j.verified,
       verified_at: (j.verified_at as string) ?? null,
+      genesis_number: typeof j.genesis_number === 'number' ? j.genesis_number : null,
       owner_email: s('owner_email'),
       metrics: (j.metrics as ListingMetrics | undefined) ?? null,
     })
@@ -175,7 +177,10 @@ export function Manage({ id }: { id: string }) {
       <h1>{st.name}</h1>
       <div className="box manage-box">
         <p className="manage-pills">
-          <span className={`status ${live ? 'live' : ''}`}>{live ? 'LIVE' : st.status === 'paused' ? 'PAUSED' : 'UNDER REVIEW'}</span>
+          <span className={`status ${live ? 'live' : ''}`}>
+            {live ? 'LIVE' : st.status === 'paused' ? 'PAUSED' : st.status === 'pending' ? 'WAITING FOR PAYMENT' : 'UNDER REVIEW'}
+          </span>
+          {st.genesis_number && <span className="pill genesis">Genesis #{st.genesis_number}</span>}
           {st.verified && <span className="pill verified pill-gap">Verified site</span>}
           {st.featured && st.featured_until && (
             <span className="pill founding pill-gap">
@@ -184,10 +189,14 @@ export function Manage({ id }: { id: string }) {
           )}
         </p>
         {st.status === 'hidden' && <p>Your listing was reported by several people and is hidden until the team reviews it.</p>}
+        {st.status === 'pending' && <p>Your listing is saved and waiting for your one-time NervixPay listing payment to go live.</p>}
         <div className="row-actions">
+          {st.status === 'pending' && <Link className="btn" href={`/pending/${id}`}>Complete listing payment →</Link>}
           {live && <Link className="btn ghost" href={`/l/${st.slug}`}>See your page</Link>}
-          {st.status !== 'hidden' && <button type="button" className="btn ghost" onClick={toggle} disabled={busy}>{st.status === 'paused' ? 'Resume' : 'Pause'}</button>}
-          <Link className="btn ghost" href={`/feature/${id}`}>{st.featured ? 'Extend Featured' : `Feature it · ${FEATURE_USD} USD`}</Link>
+          {st.status !== 'hidden' && st.status !== 'pending' && (
+            <button type="button" className="btn ghost" onClick={toggle} disabled={busy}>{st.status === 'paused' ? 'Resume' : 'Pause'}</button>
+          )}
+          {live && <Link className="btn ghost" href={`/feature/${id}`}>{st.featured ? 'Extend Featured' : `Feature it · ${FEATURE_USD} USD`}</Link>}
           {confirmDelete ? (
             <span className="confirm-row" role="group" aria-label="Confirm deletion">
               <button type="button" className="btn ghost danger" onClick={remove} disabled={busy}>{busy ? 'Deleting…' : 'Confirm delete'}</button>

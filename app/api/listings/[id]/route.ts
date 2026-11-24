@@ -85,6 +85,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
       if (l.status === 'hidden') {
         return NextResponse.json({ error: 'This listing is under review.' }, { status: 409, headers: NO_STORE_HEADERS })
       }
+      // a paid listing (#201+) cannot self-activate without payment settlement
+      if (l.status === 'pending') {
+        return NextResponse.json({ error: 'Complete listing payment to publish this listing.' }, { status: 402, headers: NO_STORE_HEADERS })
+      }
       patch.status = raw.status
     }
 

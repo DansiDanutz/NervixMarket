@@ -1,8 +1,9 @@
-import { CATEGORIES, FEATURE_USD, OFFERS, isFeatured, isVerified, toPublic, validate } from './listing'
-import { hashToken, ipHash, manageMail, manageUrl, newToken, refresh, sendMail, siteUrl } from './owner'
+import { CATEGORIES, FEATURE_USD, OFFERS, isFeatured, isGenesis, isVerified, listingUsd, toPublic, validate } from './listing'
+import { listingCheckoutUrl } from './nervixpay'
+import { hashToken, ipHash, manageMail, manageUrl, newToken, pendingListingMail, refresh, sendMail, siteUrl } from './owner'
 import { PrefillError, prefill } from './prefill'
 import { RateLimiter } from './rate-limit'
-import { browse, findLive, store } from './store'
+import { browse, findLive, genesisStatus, store } from './store'
 
 /** Zero-dependency Hosted Streamable HTTP MCP Server (JSON-RPC 2.0) for Nervix Space.
  *  Lets Claude, Cursor, Codex, OpenClaw, and custom AI agents search, inspect, preview, and publish listings. */
@@ -146,7 +147,7 @@ function buildGuide(base: string): string {
     `Nervix Space (${base}) is the AI Business Network from DansLab.`,
     '',
     '## Key facts',
-    '- Listing is free for everyone and goes live immediately.',
+    `- First 200 projects (Genesis 200) list free forever with a permanent Genesis badge. After 200, standard listings are ${listingUsd()} USD one-time in USDT/USDC via NervixPay.`,
     '- No accounts: every listing receives a private manage URL (`/manage/<id>#<token>`).',
     '- Sellers can attach a NervixPay checkout link (`https://nervixpay.live/l/<id>`) for one-time or subscription crypto payments (USDT/USDC, wallet to wallet, 0% Nervix Space fee, 0.2% NervixPay fee capped at $2).',
     `- Optional Featured boost: ${FEATURE_USD} USD / 30 days in USDT or USDC via NervixPay.`,
@@ -179,6 +180,7 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
         badge_url: `${base}/api/badge/${l.slug}`,
         featured: isFeatured(l),
         verified: isVerified(l),
+        genesis: isGenesis(l),
       })),
     })
   }
@@ -197,17 +199,19 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
       badge_url: `${base}/api/badge/${l.slug}`,
       featured: isFeatured(l),
       verified: isVerified(l),
+      genesis: isGenesis(l),
     })
   }
 
   if (name === 'list_categories') {
-    const all = await browse({}, 1)
+    const [all, genesis] = await Promise.all([browse({}, 1), genesisStatus()])
     const counts: Record<string, number> = Object.fromEntries(CATEGORIES.map((c) => [c.id, 0]))
     for (const item of all.items) {
       if (item.category in counts) counts[item.category] += 1
     }
     return okResult({
       total_live: all.total,
+      genesis,
       categories: CATEGORIES.map((c) => ({ ...c, sample_count: counts[c.id] ?? 0 })),
       offers: OFFERS,
       featured_price_usd: FEATURE_USD,
@@ -241,15 +245,21 @@ async function callTool(name: string, args: Record<string, unknown>, req: Reques
       const token = newToken()
       const l = await store().create(v.value, { edit_token_hash: hashToken(token), ip_hash: ip })
       const manage = manageUrl(l.id, token)
-      const mailed = await sendMail(l.owner_email, `Your Nervix Space listing: ${l.name}`, manageMail(l.name, manage))
-      await refresh('/', '/sitemap.xml', '/feed.xml')
+      const payPage = `${base}/pending/${l.id}`
+      const checkout = l.status === 'pending' ? listingCheckoutUrl(l.id, l.owner_email) : null
+      const mailed = l.status === 'pending'
+        ? await sendMail(l.owner_email, `Activate your Nervix Space listing: ${l.name}`, pendingListingMail(l.name, manage, payPage, listingUsd()))
+        : await sendMail(l.owner_email, `Your Nervix Space listing: ${l.name}`, manageMail(l.name, manage, l.genesis_number))
+      if (l.status === 'active') await refresh('/', '/sitemap.xml', '/feed.xml')
       return okResult({
         id: l.id,
         slug: l.slug,
         status: l.status,
+        genesis_number: l.genesis_number ?? null,
         page: `${base}/l/${l.slug}`,
         badge_url: `${base}/api/badge/${l.slug}`,
         manage,
+        ...(l.status === 'pending' ? { pay_to_publish: payPage, checkout_url: checkout, listing_usd: listingUsd() } : {}),
         mailed,
       })
     } catch (e) {

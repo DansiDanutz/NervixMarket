@@ -182,7 +182,9 @@ try {
     assert(html.includes('CI Smoke Agent') && html.includes('Embed a'), 'listing HTML missing content or badge embed')
 
     const badge = await fetch(`${base}/api/badge/${created.slug}`)
-    assert(badge.status === 200 && (await badge.text()).includes('Listed'), 'created listing badge failed')
+    const badgeSvg = await badge.text()
+    assert(badge.status === 200 && (badgeSvg.includes('Genesis 200') || badgeSvg.includes('Listed')), `created listing badge failed: ${badge.status}`)
+    assert(created.genesis_number === 5, `expected genesis_number=5 got ${created.genesis_number}`)
 
     const goVisit = await fetch(`${base}/go/${created.slug}?to=visit`, { redirect: 'manual' })
     assert(goVisit.status === 302 && goVisit.headers.get('location')?.replace(/\/$/, '') === 'https://ci-smoke.example.com', `/go visit redirect failed: ${goVisit.status} ${goVisit.headers.get('location')}`)

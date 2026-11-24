@@ -4,7 +4,7 @@ import path from 'node:path'
 import { extendUntil } from './nervixpay'
 import { FOUNDING } from './founding'
 import {
-  PAGE_SIZE, isFeatured, isLive, matches, offerMatches, slugify, toPublic,
+  PAGE_SIZE, freeListingCap, isFeatured, isLive, listingUsd, matches, offerMatches, slugify, toPublic,
   type Listing, type ListingInput, type ListingPatch, type PublicListing, type Query, type Status,
 } from './listing'
 
@@ -20,6 +20,14 @@ export interface ListingMetrics {
   window_days: number
   totals: MetricTotals
   recent: MetricTotals
+}
+
+export interface GenesisStatus {
+  cap: number
+  claimed: number
+  remaining: number
+  free_open: boolean
+  listing_usd: number
 }
 
 export const EMPTY_TOTALS = (): MetricTotals => ({ views: 0, visit_clicks: 0, pay_clicks: 0, mcp_lookups: 0, badge_loads: 0 })
@@ -51,6 +59,10 @@ export interface Store {
   report(id: string, ipHash: string, threshold: number): Promise<number>
   /** Remember a Featured payment and extend featured_until, atomically. Null if the order was already counted. */
   settleFeature(orderId: string, listingId: string, detail: Record<string, unknown>, days: number): Promise<string | null>
+  /** Remember a Standard Listing payment (#201+) and activate a pending listing atomically. Null if duplicate. */
+  settleListing(orderId: string, listingId: string, detail: Record<string, unknown>): Promise<Status | null>
+  /** Number of Genesis slots already claimed in the database (excluding Founding projects in code). */
+  genesisCount(): Promise<number>
   /** The owner's listings (to re-send lost manage links). */
   byEmail(email: string): Promise<Listing[]>
   /** Increment a privacy-safe daily counter for a DB listing. No-op for unknown/removed listings. */
@@ -101,6 +113,16 @@ export class FileStore implements Store {
   async create(input: ListingInput, meta: { edit_token_hash: string; ip_hash: string }) {
     const d = await this.load()
     const l = fresh(input, meta, (s) => d.listings.some((x) => x.slug === s))
+    const cap = freeListingCap()
+    const claimed = FOUNDING.length + d.listings.filter((x) => typeof x.genesis_number === 'number').length
+    const maxNum = d.listings.reduce((m, x) => Math.max(m, x.genesis_number ?? 0), FOUNDING.length)
+    if (claimed < cap && maxNum + 1 <= cap) {
+      l.genesis_number = maxNum + 1
+      l.status = 'active'
+    } else {
+      l.genesis_number = null
+      l.status = 'pending'
+    }
     d.listings.push(l)
     await this.save(d)
     return l
@@ -157,6 +179,21 @@ export class FileStore implements Store {
     l.featured_until = until
     await this.save(d)
     return until
+  }
+  async settleListing(orderId: string, listingId: string, detail: Record<string, unknown>) {
+    const d = await this.load()
+    if (d.payments[orderId]) return null
+    const l = d.listings.find((x) => x.id === listingId)
+    if (!l) throw new Error('unknown listing')
+    if (l.status === 'removed') throw new Error('removed listing')
+    d.payments[orderId] = { listingId, kind: 'listing', ...detail, at: now() }
+    l.orders = [...l.orders, orderId]
+    if (l.status === 'pending') l.status = 'active'
+    await this.save(d)
+    return l.status
+  }
+  async genesisCount() {
+    return (await this.load()).listings.filter((l) => typeof l.genesis_number === 'number').length
   }
   async byEmail(email: string) {
     return (await this.load()).listings.filter((l) => l.owner_email === email && l.status !== 'removed')
@@ -224,7 +261,12 @@ export class SupabaseStore implements Store {
   async create(input: ListingInput, meta: { edit_token_hash: string; ip_hash: string }) {
     const base = slugify(input.name)
     const taken = !!(await this.one(`select=id&slug=eq.${encodeURIComponent(base)}`))
-    const insert = async (l: Listing) => ((await this.rest('listings', { method: 'POST', body: JSON.stringify(l) }, 'return=representation')) as Listing[])[0]
+    const cap = freeListingCap()
+    const insert = async (l: Listing) =>
+      (await this.rest('rpc/create_market_listing', {
+        method: 'POST',
+        body: JSON.stringify({ p_row: l, p_free_cap: cap, p_founding_count: FOUNDING.length }),
+      })) as Listing
     try {
       return await insert(fresh(input, meta, () => taken))
     } catch (e) {
@@ -265,6 +307,14 @@ export class SupabaseStore implements Store {
     return await this.rest('rpc/settle_market_feature', {
       method: 'POST', body: JSON.stringify({ p_order_id: orderId, p_listing_id: listingId, p_detail: detail, p_days: days }),
     }) as string | null
+  }
+  async settleListing(orderId: string, listingId: string, detail: Record<string, unknown>) {
+    return await this.rest('rpc/settle_market_listing', {
+      method: 'POST', body: JSON.stringify({ p_order_id: orderId, p_listing_id: listingId, p_detail: detail }),
+    }) as Status | null
+  }
+  async genesisCount() {
+    return Number(await this.rest('rpc/count_genesis_listings', { method: 'POST', body: '{}' })) || 0
   }
   async byEmail(email: string) {
     return await this.rest(`listings?select=*&owner_email=eq.${encodeURIComponent(email)}&status=neq.removed&limit=20`) as Listing[]
@@ -333,6 +383,17 @@ export async function browse(q: Query, page = 1): Promise<Page> {
     page: p,
     pages: Math.max(1, Math.ceil(res.total / PAGE_SIZE)),
   }
+}
+
+/** Live Genesis 200 slot status (safe fallback if DB is momentarily unreachable). */
+export async function genesisStatus(): Promise<GenesisStatus> {
+  const cap = freeListingCap()
+  const usd = listingUsd()
+  let dbClaimed = 0
+  try { dbClaimed = await store().genesisCount() } catch (e) { console.error('genesis count unavailable', e) }
+  const claimed = Math.min(cap, FOUNDING.length + dbClaimed)
+  const remaining = Math.max(0, cap - claimed)
+  return { cap, claimed, remaining, free_open: remaining > 0, listing_usd: usd }
 }
 
 /** A public listing by slug: founding projects, then live listings. */

@@ -3,12 +3,25 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { BadgeEmbed } from '@/components/badge-embed'
+import { GenesisBar } from '@/components/genesis-bar'
 import { FEATURE_USD } from '@/lib/listing'
+import type { GenesisStatus } from '@/lib/store'
 import { EMPTY, Field, ListingFields, type Errors, type Values } from './fields'
 import s from './list.module.css'
 import { HTTPS_URL, progress } from './progress'
 
-type Done = { id: string; slug: string; page: string; manage: string; mailed: boolean }
+type Done = {
+  id: string
+  slug: string
+  status: string
+  genesis_number?: number | null
+  page: string
+  manage: string
+  pay_to_publish?: string
+  checkout_url?: string | null
+  listing_usd?: number
+  mailed: boolean
+}
 
 const MAX_URL = 300
 
@@ -31,8 +44,9 @@ function Stepper({ at }: { at: 1 | 2 | 3 }) {
   )
 }
 
-/** Quick listing: paste the link, we fill in what we can, pick a category, add your email. Free, live at once. */
-export function ListForm() {
+/** Quick listing: paste the link, we fill in what we can, pick a category, add your email.
+ *  Free forever for the first 200 Genesis projects; one-time NervixPay listing fee after 200. */
+export function ListForm({ genesis }: { genesis: GenesisStatus }) {
   const [v, setV] = useState<Values>(EMPTY)
   const [errors, setErrors] = useState<Errors>({})
   const [busy, setBusy] = useState(false)
@@ -88,13 +102,20 @@ export function ListForm() {
     } catch (err) { setFail((err as Error).message) } finally { setBusy(false) }
   }
 
-  if (done) return <Welcome d={done} name={v.name.trim() || done.slug} />
+  if (done) return <Welcome d={done} name={v.name.trim() || done.slug} cap={genesis.cap} />
 
   return (
     <main className="wrap page">
-      <div className="eyebrow">Free for everyone</div>
+      <div className="eyebrow">{genesis.free_open ? `Genesis ${genesis.cap} · Free forever` : `Standard listing · ${genesis.listing_usd} USD one-time`}</div>
       <h1>List your project in 30 seconds</h1>
-      <p className="sub">Paste your link and we fill in the rest. An idea, an app demo or a production-ready app: listing is free, and your page goes live as soon as you submit. Want to sell it or charge a subscription? Add your NervixPay link.</p>
+      <p className="sub">
+        {genesis.free_open
+          ? `Paste your link and we fill in the rest. The first ${genesis.cap} projects list free forever with a permanent Genesis badge — your page goes live immediately.`
+          : `Paste your link and we fill in the rest. All ${genesis.cap} free Genesis spots are claimed; publish permanently for ${genesis.listing_usd} USD one-time in USDT or USDC via NervixPay.`}
+      </p>
+      <div className="genesis-list-wrap">
+        <GenesisBar genesis={genesis} />
+      </div>
       <Stepper at={progress(v)} />
       <form ref={formRef} className="f" onSubmit={submit} noValidate>
         <Field name="website" label="Your project's link" hint="we read the name, description and logo from it" errors={errors}>
@@ -108,8 +129,20 @@ export function ListForm() {
         <ListingFields v={v} set={set} errors={errors} withEmail />
         <input name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="honeypot" />
         <div className="payline">
-          <div><b>Free</b><small>Listing is free, for good. You get a private link to edit, pause or delete it.</small></div>
-          <button className="btn" disabled={busy}>{busy ? 'Publishing…' : 'Publish my listing'}</button>
+          {genesis.free_open ? (
+            <div>
+              <b>Free · Genesis {genesis.cap}</b>
+              <small>{genesis.remaining} of {genesis.cap} free spots left. Live immediately with a private manage link.</small>
+            </div>
+          ) : (
+            <div>
+              <b>{genesis.listing_usd} USD one-time</b>
+              <small>Paid in USDT or USDC via NervixPay on the next step. 0% cut on your sales forever.</small>
+            </div>
+          )}
+          <button className="btn" disabled={busy}>
+            {busy ? 'Saving…' : genesis.free_open ? 'Claim free spot' : `Continue · ${genesis.listing_usd} USD →`}
+          </button>
         </div>
         {fail && <p className="err" role="alert">{fail}</p>}
       </form>
@@ -117,7 +150,7 @@ export function ListForm() {
   )
 }
 
-function Welcome({ d, name }: { d: Done; name: string }) {
+function Welcome({ d, name, cap }: { d: Done; name: string; cap: number }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const origin = (() => {
     try { return new URL(d.manage).origin } catch { return 'https://nervix.space' }
@@ -131,12 +164,23 @@ function Welcome({ d, name }: { d: Done; name: string }) {
       setCopyState('failed')
     }
   }
+  const isPending = d.status === 'pending'
   return (
     <main className="wrap page">
-      <div className="eyebrow">You’re in the space</div>
-      <h1>Your project is live.</h1>
+      <div className="eyebrow">{isPending ? 'One step left' : 'You’re in the space'}</div>
+      <h1>{isPending ? 'Your listing is saved.' : 'Your project is live.'}</h1>
       <div className="box">
-        <p><span className="status live">LIVE</span></p>
+        <p className="manage-pills">
+          <span className={`status ${isPending ? '' : 'live'}`}>{isPending ? 'WAITING FOR PAYMENT' : 'LIVE'}</span>
+          {typeof d.genesis_number === 'number' && (
+            <span className="pill genesis">Genesis #{d.genesis_number} of {cap}</span>
+          )}
+        </p>
+        {isPending && (
+          <p>
+            Complete your one-time <b>{d.listing_usd ?? 19} USD</b> NervixPay payment to publish <b>{name}</b> permanently.
+          </p>
+        )}
         <p><b>Save your private manage link.</b> It is the only way to edit, pause or delete your listing{d.mailed ? ' (we also emailed it to you)' : ''}. Anyone with it can change your listing, so keep it to yourself.</p>
         <div className="urlrow">
           <input readOnly value={d.manage} onFocus={(e) => e.currentTarget.select()} aria-label="Your manage link" />
@@ -144,12 +188,21 @@ function Welcome({ d, name }: { d: Done; name: string }) {
         </div>
         {copyState === 'failed' && <p className="note" role="status">Select the link above and copy it manually.</p>}
         <div className={s.welcomeActions}>
-          <Link className="btn" href={d.page}>See your page</Link>
-          <a className="btn ghost" href={d.manage}>Open manage page</a>
-          <Link className="btn ghost" href={`/feature/${d.id}`}>Feature it · {FEATURE_USD} USD</Link>
+          {isPending ? (
+            <>
+              <Link className="btn" href={d.pay_to_publish ?? `/pending/${d.id}`}>Pay {d.listing_usd ?? 19} USD &amp; publish →</Link>
+              <a className="btn ghost" href={d.manage}>Open manage page</a>
+            </>
+          ) : (
+            <>
+              <Link className="btn" href={d.page}>See your page</Link>
+              <a className="btn ghost" href={d.manage}>Open manage page</a>
+              <Link className="btn ghost" href={`/feature/${d.id}`}>Feature it · {FEATURE_USD} USD</Link>
+            </>
+          )}
         </div>
       </div>
-      <BadgeEmbed slug={d.slug} name={name} baseUrl={origin} defaultOpen />
+      {!isPending && <BadgeEmbed slug={d.slug} name={name} baseUrl={origin} defaultOpen />}
     </main>
   )
 }

@@ -6,8 +6,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  *  Nothing here holds or moves funds: the payer's wallet pays Dan's wallet directly, NervixPay verifies
  *  it on-chain. (Sellers' own sales go to their own NervixPay links, never through here.) */
 
-import { FEATURE_USD } from './listing'
-export { FEATURE_USD }
+import { FEATURE_USD, listingUsd } from './listing'
+export { FEATURE_USD, listingUsd }
 export const ACCEPTED_TOKENS = ['USDT', 'USDC'] as const
 const REPLAY_WINDOW_S = 5 * 60
 
@@ -16,17 +16,37 @@ const parseFeatureDays = () => {
   return Number.isInteger(n) && n >= 1 && n <= 3660 ? n : 30
 }
 
-export const config = () => ({
+export interface NervixPayConfig {
+  base: string
+  linkId: string
+  listingLinkId?: string
+  secret: string
+  featureDays: number
+  listingUsd?: number
+}
+
+export const config = (): NervixPayConfig => ({
   base: (process.env.NERVIXPAY_BASE_URL || 'https://nervixpay.live').replace(/\/$/, ''),
   linkId: process.env.NERVIXPAY_LINK_ID || '',
+  listingLinkId: process.env.NERVIXPAY_LISTING_LINK_ID || '',
   secret: process.env.NERVIXPAY_WEBHOOK_SECRET || '',
   featureDays: parseFeatureDays(),
+  listingUsd: listingUsd(),
 })
 
-/** The hosted checkout for one listing. */
-export function checkoutUrl(listingId: string, email?: string, c = config()): string | null {
+/** The hosted Featured checkout for one listing. */
+export function checkoutUrl(listingId: string, email?: string, c: NervixPayConfig = config()): string | null {
   if (!c.linkId) return null
   const u = new URL(`${c.base}/l/${encodeURIComponent(c.linkId)}`)
+  u.searchParams.set('ref', listingId)
+  if (email) u.searchParams.set('email', email)
+  return u.toString()
+}
+
+/** The hosted Standard Listing ($19 one-time) checkout for listings submitted after Genesis 200 fills. */
+export function listingCheckoutUrl(listingId: string, email?: string, c: NervixPayConfig = config()): string | null {
+  if (!c.listingLinkId) return null
+  const u = new URL(`${c.base}/l/${encodeURIComponent(c.listingLinkId)}`)
   u.searchParams.set('ref', listingId)
   if (email) u.searchParams.set('email', email)
   return u.toString()
@@ -58,13 +78,25 @@ export interface PaidEvent {
 }
 
 /** Is this payment a Featured spot? Returns why not, or null when it counts. */
-export function featureProblem(e: PaidEvent, c = config()): string | null {
+export function featureProblem(e: PaidEvent, c: NervixPayConfig = config()): string | null {
   if (e.event !== 'payment.paid') return 'not a payment'
   if (typeof e.orderId !== 'string' || !e.orderId.trim()) return 'missing order id'
   if (!c.linkId || e.paymentLinkId !== c.linkId) return 'another payment link'
   if (!ACCEPTED_TOKENS.includes(e.currencyToken as (typeof ACCEPTED_TOKENS)[number])) return `paid in ${e.currencyToken}`
   // NervixPay randomises the last decimals of the payable amount; anything below 9.99 is short.
   if (!(Number(e.amountReceived) >= FEATURE_USD - 0.01)) return `amount ${e.amountReceived} is below ${FEATURE_USD}`
+  if (typeof e.customerReference !== 'string' || !e.customerReference.trim()) return 'no listing reference'
+  return null
+}
+
+/** Is this payment a Standard Listing activation (#201+)? Returns why not, or null when it counts. */
+export function listingProblem(e: PaidEvent, c: NervixPayConfig = config()): string | null {
+  const price = c.listingUsd ?? listingUsd()
+  if (e.event !== 'payment.paid') return 'not a payment'
+  if (typeof e.orderId !== 'string' || !e.orderId.trim()) return 'missing order id'
+  if (!c.listingLinkId || e.paymentLinkId !== c.listingLinkId) return 'another payment link'
+  if (!ACCEPTED_TOKENS.includes(e.currencyToken as (typeof ACCEPTED_TOKENS)[number])) return `paid in ${e.currencyToken}`
+  if (!(Number(e.amountReceived) >= price - 0.01)) return `amount ${e.amountReceived} is below ${price}`
   if (typeof e.customerReference !== 'string' || !e.customerReference.trim()) return 'no listing reference'
   return null
 }

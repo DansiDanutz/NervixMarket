@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { Avatar } from '@/components/avatar'
+import { GenesisBar } from '@/components/genesis-bar'
 import { ListingCard } from '@/components/listing-card'
 import { CATEGORIES, FEATURE_USD, type PublicListing } from '@/lib/listing'
 import { ANY_OFFER, MODE_COOKIE, homeCopy, modeHref, resolveMode, resolveOffer, type Mode } from '@/lib/mode'
-import { browse } from '@/lib/store'
+import { browse, genesisStatus, type GenesisStatus } from '@/lib/store'
 import { PrefillDemo } from './home/prefill-demo'
 import { RememberMode } from './home/remember-mode'
 import s from './home/home.module.css'
@@ -39,7 +40,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<Par
   const mode = resolveMode(p.for, jar.get(MODE_COOKIE)?.value)
   const offer = resolveOffer(mode, p.offer)
   const view: View = { mode, q: p.q?.slice(0, MAX_QUERY) || undefined, category: p.category, offer: p.offer }
-  const r = await browse({ q: view.q, category: view.category, offer }, Number(p.page ?? 1))
+  const [r, genesis] = await Promise.all([
+    browse({ q: view.q, category: view.category, offer }, Number(p.page ?? 1)),
+    genesisStatus(),
+  ])
   const copy = homeCopy(mode)
 
   return (
@@ -56,7 +60,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<Par
           <p className={s.intro}>{copy.lead}</p>
           {mode === 'look'
             ? <SearchForm view={view} big />
-            : <p className={s.aside}>Free to list. Optional Buy or Subscribe button with <Link href="/sell">NervixPay</Link>.</p>}
+            : (
+              <p className={s.aside}>
+                {genesis.free_open
+                  ? `First ${genesis.cap} projects list free forever (${genesis.remaining} left).`
+                  : `Standard listings are ${genesis.listing_usd} USD one-time.`}{' '}
+                Optional Buy or Subscribe button with <Link href="/sell">NervixPay</Link>.
+              </p>
+            )}
         </div>
         <div className={s.proof}>
           {mode === 'build'
@@ -65,10 +76,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<Par
         </div>
       </section>
 
+      <div className="wrap genesis-wrap">
+        <GenesisBar genesis={genesis} showCta />
+      </div>
+
       <Directory view={view} offer={offer} result={r} />
-      <Trust />
-      <HowItWorks />
-      <FinalCta mode={mode} />
+      <Trust genesis={genesis} />
+      <HowItWorks genesis={genesis} />
+      <FinalCta mode={mode} genesis={genesis} />
     </main>
   )
 }
@@ -165,12 +180,19 @@ function Directory({ view, offer, result: r }: { view: View; offer?: string; res
   )
 }
 
-function Trust() {
+function Trust({ genesis }: { genesis: GenesisStatus }) {
   return (
     <section className={`wrap ${s.trust}`} aria-labelledby="trust-title">
       <h2 id="trust-title" className="sr">What it costs</h2>
       <ul>
-        <li><span>Nervix Space takes</span><b>0%</b><p>Listing is free. No accounts: you get a private manage link.</p></li>
+        <li>
+          <span>Nervix Space takes</span><b>0%</b>
+          <p>
+            {genesis.free_open
+              ? `First ${genesis.cap} projects list free forever (${genesis.remaining} left). No accounts: private manage link.`
+              : `One-time ${genesis.listing_usd} USD listing fee, 0% cut on your sales forever.`}
+          </p>
+        </li>
         <li><span>NervixPay charges the seller</span><b>0.2%</b><p>Capped at $2. Nervix Space takes nothing on top.</p></li>
         <li><span>Payments go</span><b>Wallet to wallet</b><p>USDT or USDC, verified on-chain, never custodied.</p></li>
       </ul>
@@ -178,12 +200,18 @@ function Trust() {
   )
 }
 
-function HowItWorks() {
+function HowItWorks({ genesis }: { genesis: GenesisStatus }) {
   return (
     <section className={`wrap ${s.how}`} aria-labelledby="how-title">
       <h2 id="how-title">How it works</h2>
       <ol>
-        <li><b>Paste your link</b><span>We read the name, description and logo from your page. About 30 seconds, free.</span></li>
+        <li>
+          <b>Paste your link</b>
+          <span>
+            We read the name, description and logo from your page in about 30 seconds
+            {genesis.free_open ? ` — free for the first ${genesis.cap} projects.` : `.`}
+          </span>
+        </li>
         <li><b>Add NervixPay, if you sell</b><span>Your listing gets a Buy or Subscribe button. Buyers pay your wallet directly.</span></li>
         <li><b>Feature it, if you like</b><span>Featured · {FEATURE_USD} USD / 30 days: shown first in the directory and your category.</span></li>
       </ol>
@@ -191,13 +219,17 @@ function HowItWorks() {
   )
 }
 
-function FinalCta({ mode }: { mode: Mode }) {
+function FinalCta({ mode, genesis }: { mode: Mode; genesis: GenesisStatus }) {
   return (
     <section className={`wrap ${s.final}`} aria-labelledby="final-title">
       <h2 id="final-title">{mode === 'build' ? 'Your listing is 30 seconds away.' : 'Built something with AI?'}</h2>
-      <p>List your AI idea, app demo or production-ready app for free.</p>
+      <p>
+        {genesis.free_open
+          ? `Claim one of the ${genesis.remaining} remaining Genesis ${genesis.cap} spots — free forever with a permanent Genesis badge.`
+          : `Publish your AI project permanently for ${genesis.listing_usd} USD one-time via NervixPay.`}
+      </p>
       <div className={s.ctas}>
-        <Link href="/list" className="btn">List your project free</Link>
+        <Link href="/list" className="btn">{genesis.free_open ? 'Claim a free Genesis spot' : `List your project · ${genesis.listing_usd} USD`}</Link>
         <Link href="/sell" className="btn ghost">Sell with NervixPay</Link>
       </div>
     </section>
