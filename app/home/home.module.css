@@ -68,7 +68,7 @@
 .how li { counter-increment: step; display: grid; gap: 6px; align-content: start; padding: 20px; border: 1px solid var(--line); border-radius: 16px }
 .how li::before { content: '0' counter(step); font: 600 14px var(--mono); color: var(--accent-2) }
 .how b { font: 700 19px var(--display) }
-.how span { color: var(--muted) }
+.how li > span { color: var(--muted) }
 
 .final { margin-top: 48px; padding-block: 48px; text-align: center }
 .final p { color: var(--muted); font-size: 18px; margin: -8px 0 24px }

@@ -213,7 +213,8 @@ function HowItWorks({ genesis }: { genesis: GenesisStatus }) {
           </span>
         </li>
         <li><b>Add NervixPay, if you sell</b><span>Your listing gets a Buy or Subscribe button. Buyers pay your wallet directly.</span></li>
-        <li><b>Feature it, if you like</b><span>Featured · {FEATURE_USD} USD / 30 days: shown first in the directory and your category.</span></li>
+        <li><b>Feature it, if you like</b><span>Show your listing first in the directory and your category.</span>
+          <Link className="btn" href="/feature"><span>{`Feature your project for 30 days — $${FEATURE_USD} USD`}</span></Link></li>
       </ol>
     </section>
   )
