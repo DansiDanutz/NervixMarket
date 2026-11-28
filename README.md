@@ -1,10 +1,15 @@
 # Nervix Space — nervix.space
 
 **A space for what you build with AI. Show it. Share it. Sell it.** The home of the DansLab AI Business
-Network: anyone can list an idea, an app demo, or a production-ready app, **for free**.
+Network: anyone can list an idea, an app demo, or a production-ready app.
 
-- **Listing is free for everyone, live at once.** Paste the project's link: the form reads the page's name,
-  description and logo (`/api/prefill`), you pick a category and add your email. About 30 seconds.
+- **Genesis 200: the first 200 projects list free, forever**, live at once, with a permanent "Genesis #N" badge
+  (`FREE_LISTING_CAP`, 200; the founding projects count toward it). Paste the project's link: the form reads the
+  page's name, description and logo (`/api/prefill`), you pick a category and add your email. About 30 seconds.
+- **From project #201: a one-time `LISTING_USD` (19 USD) in USDT/USDC through NervixPay.** The listing is saved as
+  `pending` and goes live by itself when the signed webhook confirms the payment on `NERVIXPAY_LISTING_LINK_ID`
+  (`/pending/<id>` shows the pay button). **Set that link before the Genesis spots run out**, or #201 has no way to
+  pay: `/api/health` warns from 20 spots left.
 - **No accounts.** Each listing gets a private manage link (`/manage/<id>#<token>`; only a sha256 of the token is
   stored, and the `#fragment` never reaches a server). It is shown once after listing and emailed when Resend
   is set up. Lost it? `/api/manage/recover` mails a fresh one to the owner's email.
@@ -30,15 +35,20 @@ Network: anyone can list an idea, an app demo, or a production-ready app, **for 
 2. **NervixPay** (nervixpay.live, as the merchant): a payment link "Nervix Space Featured", fixed **10 USD**, USDT
    and USDC → `NERVIXPAY_LINK_ID`. Integrations → Payment webhook → `https://nervix.space/api/webhooks/nervixpay`;
    its secret → `NERVIXPAY_WEBHOOK_SECRET`.
-3. **Vercel**: the variables in `.env.example`. Optional: `RESEND_API_KEY` + `MAIL_FROM` (mailing manage links),
-   `ADMIN_TOKEN` (moderation).
+   Also a second link "Nervix Space listing", fixed **19 USD** (`LISTING_USD`), USDT and USDC →
+   `NERVIXPAY_LISTING_LINK_ID`. The same webhook serves both links.
+3. **Vercel**: the variables in `.env.example`. Optional: `RESEND_API_KEY` + `MAIL_FROM` (mailing manage links,
+   receipts, Featured reminders), `ADMIN_TOKEN` (moderation), `CRON_SECRET` (16+ characters; Vercel sends it to the
+   daily `/api/cron/reminders` job, which mails owners 48 hours before their Featured spot ends).
+4. **Check it**: `GET /api/health` → `readiness.ready: true` and `readiness.warnings: []` means both checkouts, the
+   webhook and mail are configured. It shows only yes/no and plain warnings, never a value.
 
 ## API & MCP (AI agents can use it)
 - `POST /api/mcp` (`GET /api/mcp` for metadata) — Hosted Streamable HTTP MCP server (JSON-RPC 2.0, zero install): `search_listings`, `get_listing`, `list_categories`, `preview_url`, `submit_listing`, plus `nervix://directory` & `nervix://guide` resources. Human docs & copy-paste configs at `/agents`.
 - `GET /llms.txt` — machine-readable LLM/agent discovery manifest
 - `GET /feed.xml` — auto-updating RSS 2.0 feed of live listings
 - `GET /api/badge/:slug` — embeddable SVG badge (`Listed`, `Featured`, or `Founding` on Nervix Space)
-- `GET /api/health` — readiness & database reachability check (200 ok / 503 degraded)
+- `GET /api/health` — database reachability (200 ok / 503 degraded) plus `readiness`: checkouts, webhook, mail and Genesis spots left, with warnings
 - `GET /api/listings?q=&category=&offer=&page=` — live listings, 36 a page, featured first (never private fields)
 - `POST /api/listings` — submit; returns `{ id, slug, page, manage, mailed }`
 - `GET /api/listings/:id` — public state; with `x-manage-token`, also the owner's view
