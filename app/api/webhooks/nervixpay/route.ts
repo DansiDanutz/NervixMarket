@@ -22,7 +22,10 @@ export async function POST(req: Request) {
   if (!body.ok) return NextResponse.json({ error: body.error }, { status: body.status, headers: NO_STORE_HEADERS })
   const raw = body.text
   const c = config()
-  if (!verifySignature(c.secret, req.headers.get('x-nervixpay-signature'), raw)) {
+  const signature = req.headers.get('x-nervixpay-signature')
+  const scopedKey = process.env.NERVIX_SPACE_FEATURE_SIGNING_KEY
+  const scoped = !!scopedKey && verifySignature(scopedKey, signature, raw)
+  if (!scoped && !verifySignature(c.secret, signature, raw)) {
     return NextResponse.json({ error: 'bad signature' }, { status: 401, headers: NO_STORE_HEADERS })
   }
   let parsed: unknown
@@ -32,6 +35,9 @@ export async function POST(req: Request) {
   }
   const e = parsed as PaidEvent
 
+  if (scoped && (!c.linkId || e.paymentLinkId !== c.linkId || e.event !== 'payment.paid' || (parsed as { test?: boolean }).test === true)) {
+    return NextResponse.json({ error: 'outside featured signing scope' }, { status: 403, headers: NO_STORE_HEADERS })
+  }
   const isListingLink = Boolean(c.listingLinkId && e.paymentLinkId === c.listingLinkId)
   const problem = isListingLink ? listingProblem(e, c) : featureProblem(e, c)
   if (problem) {

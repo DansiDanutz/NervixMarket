@@ -255,7 +255,14 @@ describe('Maker Growth & Proof Loop', () => {
       transactionId: 'tx_123',
       paidAt: new Date().toISOString(),
     })
-    const sig = signWebhook(process.env.NERVIXPAY_WEBHOOK_SECRET!, payload)
+    vi.stubEnv('NERVIX_SPACE_FEATURE_SIGNING_KEY', 'fixture-feature-only-key')
+    const scopedKey = process.env.NERVIX_SPACE_FEATURE_SIGNING_KEY!
+    const other = JSON.stringify({ ...JSON.parse(payload), paymentLinkId: 'other-link' })
+    const denied = await webhookPost(new Request('https://nervix.space/api/webhooks/nervixpay', {
+      method: 'POST', headers: { 'x-nervixpay-signature': signWebhook(scopedKey, other) }, body: other,
+    }))
+    expect(denied.status).toBe(403)
+    const sig = signWebhook(scopedKey, payload)
 
     const r1 = await webhookPost(new Request('https://nervix.space/api/webhooks/nervixpay', {
       method: 'POST',
